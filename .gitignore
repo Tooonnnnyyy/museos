@@ -15,3 +15,6 @@ artifacts/
 # keep the example file tracked (must come after .env*)
 !.env.example
 .omc/
+
+# personal Claude Code permissions stay on your machine
+.claude/settings.local.json
