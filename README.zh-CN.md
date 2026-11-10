@@ -15,7 +15,7 @@ MuseOS 是一个在你自己电脑上运行的多模型编排引擎，用的是*
 **1. 安装和启动。** 需要 Python 3.12+ 和 [uv](https://docs.astral.sh/uv/)，不用装数据库。
 
 ```bash
-git clone <仓库地址> museos && cd museos
+git clone https://github.com/Tooonnnnyyy/museos.git && cd museos
 ```
 
 ```bash

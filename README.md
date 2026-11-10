@@ -22,7 +22,7 @@ questions*, instead of taking anyone's word for it.
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/). No database to install.
 
 ```bash
-git clone <this-repository-url> museos && cd museos
+git clone https://github.com/Tooonnnnyyy/museos.git && cd museos
 ```
 
 ```bash

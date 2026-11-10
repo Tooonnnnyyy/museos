@@ -19,7 +19,7 @@ Ce fichier est le guide d'utilisation.
 **1. Installer et démarrer.** Il faut Python 3.12+ et [uv](https://docs.astral.sh/uv/). Aucune base de données à installer.
 
 ```bash
-git clone <url-du-depot> museos && cd museos
+git clone https://github.com/Tooonnnnyyy/museos.git && cd museos
 ```
 
 ```bash
