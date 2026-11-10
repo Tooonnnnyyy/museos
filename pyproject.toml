@@ -1,0 +1,41 @@
+[project]
+name = "museos"
+version = "0.1.0"
+description = "One idea in, several AI models at work, one merged answer out. Bring your own model keys."
+authors = [{ name = "MuseOS authors" }]
+license = "AGPL-3.0-or-later"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiosqlite>=0.22.1",
+    "fastapi>=0.162.2",
+    "httpx>=0.28.1",
+    "langgraph>=1.2.20",
+    "litellm>=1.108.3",
+    "pydantic>=2.14.3",
+    "sqlalchemy[asyncio]>=2",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.optional-dependencies]
+postgres = [
+    "asyncpg>=0.32.0",
+]
+
+[project.scripts]
+museos = "museos.cli:main"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1.post1",
+]

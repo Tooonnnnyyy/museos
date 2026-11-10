@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+.env.*
+!.env.example
+providers.toml
+*.db
+artifacts/
+.DS_Store
+.vercel
+.env*
+
+# keep the example file tracked (must come after .env*)
+!.env.example
+.omc/

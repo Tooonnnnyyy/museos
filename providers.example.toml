@@ -1,0 +1,115 @@
+# MuseOS providers. The easy way to create your own file is:  museos setup
+# This example shows every kind of provider. Copy it to providers.toml and edit, or let setup write it.
+#
+# Rules:
+#   * Never put a key here. `api_key_env` names the environment variable (in .env) that holds it.
+#   * `model` for adapter "litellm" uses LiteLLM's "<provider>/<model-id>" form.
+#     Model IDs change often: copy the current one from the provider's own models page.
+#   * Prices are optional. If you leave them out, MuseOS uses LiteLLM's price table when it knows the model,
+#     and otherwise reserves each task's cost ceiling.
+#   * An app subscription (ChatGPT Plus, Claude Pro, Gemini app...) is not an API key. To use a subscription,
+#     see the two subscription examples at the end.
+#   * MuseOS works best with two or more different models, so they can review each other.
+
+# --- API key providers ---------------------------------------------------------------
+[[providers]]
+id = "openai"
+display_name = "OpenAI"
+adapter = "litellm"
+model = "openai/REPLACE_WITH_MODEL_ID"
+api_key_env = "OPENAI_API_KEY"
+capabilities = ["reasoning", "planning", "synthesis", "review", "research", "code", "json", "long_context"]
+enabled = false
+
+[[providers]]
+id = "anthropic"
+display_name = "Anthropic Claude"
+adapter = "litellm"
+model = "anthropic/REPLACE_WITH_MODEL_ID"
+api_key_env = "ANTHROPIC_API_KEY"
+capabilities = ["reasoning", "planning", "synthesis", "review", "research", "code", "json", "long_context"]
+enabled = false
+
+[[providers]]
+id = "gemini"
+display_name = "Google Gemini"
+adapter = "litellm"
+model = "gemini/REPLACE_WITH_MODEL_ID"
+api_key_env = "GEMINI_API_KEY"
+capabilities = ["reasoning", "planning", "synthesis", "review", "research", "code", "json", "long_context"]
+enabled = false
+
+[[providers]]
+id = "deepseek"
+display_name = "DeepSeek"
+adapter = "litellm"
+model = "deepseek/REPLACE_WITH_MODEL_ID"
+api_base = "https://api.deepseek.com"
+api_key_env = "DEEPSEEK_API_KEY"
+capabilities = ["reasoning", "planning", "synthesis", "review", "research", "code", "json", "long_context"]
+enabled = false
+
+# One key, many models.
+[[providers]]
+id = "openrouter"
+display_name = "OpenRouter"
+adapter = "litellm"
+model = "openrouter/REPLACE_WITH_VENDOR/MODEL_ID"
+api_key_env = "OPENROUTER_API_KEY"
+capabilities = ["reasoning", "planning", "synthesis", "review", "research", "code", "json", "long_context"]
+enabled = false
+
+# --- Any OpenAI-compatible endpoint: Qwen, Kimi, GLM, a company gateway, or a local Ollama ----------
+[[providers]]
+id = "my-endpoint"
+display_name = "My OpenAI-compatible endpoint"
+adapter = "litellm"
+model = "openai/REPLACE_WITH_MODEL_ID"
+api_base = "https://REPLACE_WITH_HOST/v1"
+api_key_env = "MY_ENDPOINT_API_KEY"      # leave this line out if the endpoint needs no key
+capabilities = ["reasoning", "planning", "synthesis", "review", "research", "code", "json"]
+enabled = false
+
+# --- Subscriptions (personal use on your own machine only) ---------------------------------------
+# Read docs/adr/ADR-005 first. Keep one call at a time and the call caps. Never serve other people
+# through a personal subscription: use an API key for that.
+
+# Claude Pro/Max through the official Claude Code CLI, signed in as you.
+[[providers]]
+id = "claude-subscription"
+display_name = "Claude (your subscription)"
+adapter = "claude_cli"
+model = "REPLACE_WITH_MODEL_ID_OR_ALIAS"
+capabilities = ["reasoning", "planning", "synthesis", "review", "research", "code", "json", "long_context"]
+cost_per_1k_input = 0.0
+cost_per_1k_output = 0.0
+max_concurrency = 1
+max_calls_per_run = 6
+max_calls_per_day = 40
+enabled = false
+
+# Any other command-line tool you are signed in to. It must read the prompt on standard input and print
+# its answer on standard output. {model} is replaced by `model`. You are responsible for the tool's terms.
+[[providers]]
+id = "my-cli"
+display_name = "My command-line tool"
+adapter = "command"
+model = "REPLACE_WITH_MODEL_NAME"
+command = ["REPLACE_WITH_COMMAND", "--model", "{model}"]
+capabilities = ["reasoning", "planning", "synthesis", "review", "json"]
+cost_per_1k_input = 0.0
+cost_per_1k_output = 0.0
+max_concurrency = 1
+max_calls_per_run = 6
+max_calls_per_day = 40
+enabled = false
+
+# --- Demo model: placeholder answers, no key. Remove once a real model is enabled. ---------------
+[[providers]]
+id = "mock-alpha"
+adapter = "mock"
+model = "mock-alpha-1"
+capabilities = ["reasoning", "planning", "json", "synthesis", "review"]
+cost_per_1k_input = 0.001
+cost_per_1k_output = 0.002
+enabled = true

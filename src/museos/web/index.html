@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MuseOS Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* apm-style tokens (see ~/.claude/skills/apm-style). Light only: ink bands give the dark moments. */
+:root{
+  --ink:#11120f;--ink-raised:#191a17;--page:#fff;--paper:#f3efe3;--bone:#fffdf7;
+  --lime:#d9ff43;--flame:#ff5a36;--violet:#b7a7ff;--mint:#75ded1;--cobalt:#2864ff;--mute:#d8d8d2;
+  --soft:color-mix(in srgb,var(--ink) 68%,transparent);
+  --font-text:"Manrope","PingFang SC","Hiragino Sans GB",system-ui,sans-serif;
+  --font-label:"DM Mono","PingFang SC",ui-monospace,monospace;
+  --ease:cubic-bezier(.16,1,.3,1);--rule:2px solid var(--ink);
+  --hair:1px solid color-mix(in srgb,var(--ink) 25%,transparent);--focus:var(--ink);color-scheme:light}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--page);color:var(--ink);font:400 1rem/1.5 var(--font-text);overflow-x:hidden;accent-color:var(--flame)}
+h1,h2,h3{margin:0;font-weight:500;text-wrap:balance}
+p{margin:0;max-width:72ch;text-wrap:pretty}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit}
+:focus-visible{outline:4px solid var(--focus);outline-offset:3px}
+.wrap{width:min(100% - 40px,1240px);margin-inline:auto}
+.band{padding-block:80px;border-bottom:var(--rule)}
+.band--paper{background:var(--paper)}.band--violet{background:var(--violet)}.band--bone{background:var(--bone)}
+.band--ink{background:var(--ink);color:var(--bone);--focus:var(--lime);--soft:color-mix(in srgb,var(--bone) 72%,transparent);
+  --hair:1px solid color-mix(in srgb,var(--bone) 28%,transparent)}
+.label{font:400 .78rem/1.5 var(--font-label)}
+.eyebrow{font:400 .78rem/1.5 var(--font-label);text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:10px;margin:0 0 18px}
+.t-hero{font-size:clamp(2.6rem,6.4vw,5.2rem);line-height:1;letter-spacing:-.038em}
+.t-hero span.line{display:block}
+.t-h2{font-size:clamp(2.2rem,4.6vw,4rem);line-height:.98;letter-spacing:-.038em}
+.t-h4{font-size:clamp(1.5rem,2.6vw,2.3rem);line-height:1.08;letter-spacing:-.03em;overflow-wrap:anywhere}
+.t-lede{font-size:clamp(1.1rem,1.6vw,1.4rem);line-height:1.4}
+.accent{color:var(--flame)}
+.soft{color:var(--soft)}
+.dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--flame);box-shadow:0 0 0 6px color-mix(in srgb,var(--flame) 20%,transparent);animation:pulse 2s infinite}
+@keyframes pulse{50%{transform:scale(.7);opacity:.55}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* nav */
+.nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:16px;border-bottom:var(--rule)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:500;text-decoration:none}
+.mark{width:34px;height:34px;display:grid;place-items:center;background:var(--lime);border:var(--rule);transform:rotate(-4deg);font-weight:500;line-height:1}
+.nav__links{display:flex;align-items:center;gap:22px}
+.nav__links a{font:400 .8rem/1.5 var(--font-label);text-decoration:none}
+.nav__links a:hover{text-decoration:underline;text-underline-offset:4px}
+
+.lang{flex:none;display:inline-flex;border:var(--rule);border-radius:999px;overflow:hidden}
+.lang button{padding:5px 11px;border:0;border-right:var(--rule);background:var(--page);font:400 .72rem/1.5 var(--font-label);cursor:pointer}
+.lang button:last-child{border-right:0}
+.lang button[aria-pressed="true"]{background:var(--ink);color:var(--bone)}
+.lang button:focus-visible{outline-offset:-4px}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 20px;border:var(--rule);border-radius:999px;background:var(--ink);color:var(--bone);
+  font:400 .78rem/1.5 var(--font-label);cursor:pointer;box-shadow:4px 4px 0 var(--flame);transition:transform .25s var(--ease),box-shadow .25s var(--ease),background .25s var(--ease)}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--flame)}
+.btn--ghost{background:transparent;color:var(--ink);box-shadow:none}.btn--ghost:hover{box-shadow:none;background:var(--ink);color:var(--bone)}
+.btn--lime{background:var(--lime);color:var(--ink)}
+.btn:disabled{opacity:.55;box-shadow:none;pointer-events:none}
+.band--ink .btn--ghost{color:var(--bone);border-color:var(--bone)}
+
+/* hero + form */
+.hero{padding:56px 0 64px;border-bottom:var(--rule)}
+.hero__grid{display:grid;grid-template-columns:1.25fr .75fr;gap:50px;align-items:end}
+.field{display:block;width:100%;padding:16px;border:var(--rule);border-radius:0;background:var(--bone);font-size:1.05rem;line-height:1.45;box-shadow:6px 6px 0 var(--ink)}
+.field:focus{outline:2px solid var(--ink);outline-offset:0}
+textarea.field{min-height:150px;resize:vertical}
+.opts{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.opt{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:var(--rule);border-radius:999px;font:400 .78rem/1.5 var(--font-label);cursor:pointer;background:var(--page);user-select:none}
+.opt:has(input:checked){background:var(--lime)}
+.opt input{position:absolute;opacity:0;width:0;height:0}
+.opt::before{content:"";width:10px;height:10px;border:2px solid var(--ink);border-radius:50%}
+.opt:has(input:checked)::before{background:var(--ink)}
+.opt:has(input:focus-visible){outline:4px solid var(--ink);outline-offset:3px}
+.mini{display:inline-flex;flex-wrap:wrap;max-width:100%;align-items:center;gap:8px;font:400 .78rem/1.5 var(--font-label)}
+.mini :is(input,select){padding:7px 10px;border:var(--rule);border-radius:0;background:var(--bone);font:400 .78rem/1.5 var(--font-label)}
+.mini input{width:74px}
+.mini select{max-width:100%;min-width:0}
+.opt{max-width:100%}
+.formrow{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:18px}
+.msg{margin-top:14px;font-size:.95rem;border-left:6px solid var(--flame);padding-left:10px}
+.msg:empty{display:none}
+.msg code{font-family:var(--font-label)}
+
+/* blind-test strip */
+.strip{background:var(--lime);border-bottom:var(--rule)}
+.strip__grid{display:grid;grid-template-columns:minmax(240px,1fr) minmax(360px,1.2fr) auto;gap:28px;align-items:center;padding-block:22px}
+.strip__title{font-size:clamp(1.5rem,2.6vw,2.6rem);line-height:1;letter-spacing:-.035em;font-weight:500}
+.cells{display:grid;grid-template-columns:repeat(4,minmax(64px,1fr));border:var(--rule);background:var(--bone)}
+.cells>div{padding:12px 10px;text-align:center;border-right:var(--rule)}.cells>div:last-child{border-right:0}
+.cells b{display:block;font:500 clamp(1.4rem,2.6vw,2.4rem)/1 var(--font-label);font-variant-numeric:tabular-nums}
+.cells span{display:block;margin-top:5px;font:400 .6875rem/1.3 var(--font-label);letter-spacing:.06em}
+
+/* section head */
+.head{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-bottom:44px;align-items:end}
+.head p{font-size:clamp(1rem,1.4vw,1.2rem);line-height:1.4;max-width:520px}
+
+/* run view */
+.status{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;margin:22px 0 34px}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:5px 13px;border:2px solid currentColor;border-radius:999px;font:400 .72rem/1.5 var(--font-label);text-transform:uppercase;letter-spacing:.06em;background:var(--bone);color:var(--ink)}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--ink)}
+.pill.is-live{background:var(--lime)}.pill.is-live i{background:var(--flame);animation:pulse 1.4s infinite}
+.pill.is-bad{background:var(--flame)}
+.pill.is-wait{background:var(--violet)}
+.matrix{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));border-top:var(--rule);border-left:var(--rule);background:var(--bone)}
+.cell{position:relative;padding:20px 20px 22px;border-right:var(--rule);border-bottom:var(--rule);min-width:0;transition:background .4s var(--ease)}
+.cell.is-live{background:var(--lime)}
+.cell.is-bad{background:color-mix(in srgb,var(--flame) 22%,var(--bone))}
+.cell__no{display:flex;justify-content:space-between;gap:8px;font:400 .72rem/1.5 var(--font-label);text-transform:uppercase;letter-spacing:.06em}
+.cell__title{margin:26px 0 6px;font-size:1.3rem;line-height:1.12;letter-spacing:-.02em;font-weight:500;overflow-wrap:anywhere}
+.cell__meta{font:400 .72rem/1.6 var(--font-label);color:var(--soft);overflow-wrap:anywhere}
+.tag{display:inline-block;margin-top:10px;padding:2px 9px;border:var(--rule);border-radius:999px;font:400 .72rem/1.5 var(--font-label);background:var(--page);overflow-wrap:anywhere}
+.sub{margin:44px 0 14px}
+.rows{border-top:var(--rule)}
+.rows li,.rows>div{padding:12px 0;border-bottom:var(--hair);overflow-wrap:anywhere}
+ul.rows{list-style:none;margin:0;padding:0}
+details{border-bottom:var(--rule)}details:first-of-type{border-top:var(--rule)}
+summary{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;cursor:pointer;list-style:none;font-size:1.25rem;letter-spacing:-.02em;font-weight:500}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";flex:none;width:34px;height:34px;display:grid;place-items:center;border:var(--rule);border-radius:50%;font:400 1.1rem/1 var(--font-label);transition:transform .3s var(--ease),background .3s var(--ease)}
+details[open] summary::after{transform:rotate(45deg);background:var(--ink);color:var(--bone)}
+details>div{padding:0 0 20px}
+.log{max-height:240px;overflow:auto;padding:14px;background:var(--ink);color:var(--bone);font:400 .72rem/1.7 var(--font-label)}
+.empty{padding:50px 0 10px}
+
+/* clarify note */
+.note{position:relative;max-width:760px;margin:10px 0 40px;padding:30px 28px 28px;background:var(--lime);border:var(--rule);box-shadow:8px 8px 0 color-mix(in srgb,var(--ink) 30%,transparent);rotate:-.6deg}
+.note::before{content:"";position:absolute;left:50%;top:-13px;width:72px;height:24px;translate:-50% 0;background:color-mix(in srgb,var(--bone) 65%,transparent);border:var(--hair)}
+.note>*{rotate:.6deg}
+.note h3{font-size:1.6rem;line-height:1.08;letter-spacing:-.03em;margin-bottom:8px}
+.q{display:block;margin-top:18px;font-weight:500}
+.q .field{margin-top:8px;box-shadow:none;font-size:1rem;padding:11px 12px}
+
+/* blind test */
+.ab{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
+.side{padding:26px;background:var(--bone);border:var(--rule);box-shadow:7px 7px 0 var(--ink);min-width:0}
+.side:nth-child(2){rotate:.4deg}
+.side__letter{display:grid;place-items:center;width:52px;height:52px;border:var(--rule);background:var(--lime);font:500 1.7rem/1 var(--font-text);rotate:-4deg;margin-bottom:18px}
+.side:nth-child(2) .side__letter{background:var(--mint);rotate:3deg}
+.side h3{font:400 .72rem/1.5 var(--font-label);text-transform:uppercase;letter-spacing:.08em;margin:22px 0 2px}
+.side ul{list-style:none;margin:0;padding:0}.side li{padding:8px 0;border-bottom:var(--hair);overflow-wrap:anywhere}
+.vote{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:36px}
+.reveal{margin-top:34px;padding:22px;border:var(--rule);background:var(--lime)}
+.reveal b{font-weight:500}
+
+/* lists on dark and violet */
+.list{border-top:2px solid currentColor}
+.item{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;padding:14px 0;border-bottom:var(--hair)}
+button.item{width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left;cursor:pointer}
+button.item:hover .item__t{text-decoration:underline;text-underline-offset:4px}
+.item__t{font-size:1.15rem;letter-spacing:-.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.item__s{font:400 .72rem/1.5 var(--font-label);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.foot{padding:26px 0;background:var(--ink);color:var(--bone);font:400 .72rem/1.6 var(--font-label);text-transform:uppercase;letter-spacing:.06em}
+
+@media (max-width:820px){
+  .hero__grid,.head,.ab{grid-template-columns:1fr;gap:26px}
+  .strip__grid{grid-template-columns:1fr;gap:16px}
+  .band{padding-block:60px}.head{margin-bottom:30px}
+}
+@media (max-width:520px){
+  .wrap{width:calc(100% - 32px)}
+  .nav__links a:not(.keep){display:none}
+  .nav__links{gap:12px}#health span:last-child{display:none}
+  .cells b{font-size:1.3rem}.side{padding:20px}.note{padding:26px 18px 22px}
+}
+</style>
+</head>
+<body>
+<div class="wrap"><nav class="nav" aria-label="Main">
+  <a class="brand" href="#top"><span class="mark">M</span><span>MuseOS</span></a>
+  <div class="nav__links">
+    <a href="#now" data-i18n="navNow"></a><a href="#blind" data-i18n="navBlind"></a><a href="#history" data-i18n="navHistory"></a>
+    <span class="lang keep" role="group" aria-label="Language">
+      <button type="button" data-lang="en">EN</button><button type="button" data-lang="fr">FR</button><button type="button" data-lang="zh">中文</button>
+    </span>
+    <span class="label keep" id="health" style="display:flex;align-items:center;gap:10px"><span class="dot"></span><span data-i18n="connecting"></span></span>
+  </div>
+</nav></div>
+
+<header class="hero" id="top"><div class="wrap">
+  <p class="eyebrow" data-i18n="tagline"></p>
+  <div class="hero__grid">
+    <h1 class="t-hero"><span class="line" data-i18n="hero1"></span><span class="line"><span data-i18n="hero2a"></span><span class="accent" data-i18n="hero2b"></span><span data-i18n="hero2c"></span></span></h1>
+    <p class="t-lede" data-i18n="lede"></p>
+  </div>
+  <form id="form" style="margin-top:44px">
+    <label class="label" for="idea" style="display:block;margin-bottom:8px" data-i18n="ideaLabel"></label>
+    <textarea class="field" id="idea" data-i18n-ph="ideaPh"></textarea>
+    <div class="opts">
+      <label class="opt"><input type="checkbox" id="clarify" checked><span data-i18n="optClarify"></span></label>
+      <label class="opt"><input type="checkbox" id="review" checked><span data-i18n="optReview"></span></label>
+      <label class="opt"><input type="checkbox" id="compare"><span data-i18n="optCompare"></span></label>
+    </div>
+    <div class="formrow">
+      <label class="mini"><span data-i18n="mode"></span> <select id="mode"><option value="dynamic" data-i18n="modeDynamic"></option><option value="fan_out" data-i18n="modeFanout"></option></select></label>
+      <label class="mini" id="baselinewrap" hidden><span data-i18n="baseline"></span> <select id="baseline"></select></label>
+      <label class="mini"><span data-i18n="budget"></span> <input type="number" id="budget" value="0.5" min="0" max="2" step="0.1"></label>
+      <label class="mini"><span data-i18n="maxTasks"></span> <input type="number" id="maxtasks" value="5" min="1" max="20"></label>
+      <button class="btn" id="go" type="submit" data-i18n="start"></button>
+    </div>
+    <p class="msg" id="formerr" role="alert"></p>
+    <p class="msg" id="demo" hidden data-i18n="demo"></p>
+  </form>
+</div></header>
+
+<section class="strip" id="blind"><div class="wrap strip__grid">
+  <div>
+    <p class="eyebrow" style="margin-bottom:6px" data-i18n="stripEyebrow"></p>
+    <div class="strip__title" id="tallytitle"></div>
+    <p style="margin-top:8px;font-size:.92rem" id="tallynote"></p>
+  </div>
+  <div class="cells" id="cells">
+    <div><b>0</b><span data-i18n="cellMuseos"></span></div><div><b>0</b><span data-i18n="cellSingle"></span></div><div><b>0</b><span data-i18n="cellTie"></span></div><div><b>10</b><span data-i18n="cellLeft"></span></div>
+  </div>
+  <button class="btn" id="nextblind" type="button" hidden data-i18n="goVote"></button>
+</div></section>
+
+<section class="band band--paper" id="now"><div class="wrap" id="stage"></div></section>
+
+<section class="band band--ink"><div class="wrap">
+  <div class="head"><h2 class="t-h2" data-i18n="modelsTitle"></h2><p class="soft" data-i18n="modelsIntro"></p></div>
+  <div class="list" id="providers"></div>
+</div></section>
+
+<section class="band band--violet" id="history"><div class="wrap">
+  <div class="head"><h2 class="t-h2" data-i18n="historyTitle"></h2><p data-i18n="historyIntro"></p></div>
+  <div class="list" id="runs"></div>
+</div></section>
+
+<footer class="foot"><div class="wrap" data-i18n="footer"></div></footer>
+
+<script>
+const I18N = {
+en: {
+  navNow: "Current run", navBlind: "Blind test", navHistory: "History", connecting: "Connecting", online: "{0} models online", offline: "Connection failed",
+  tagline: "Command Center · Your one-person multi-model team",
+  hero1: "One idea in.", hero2a: "One ", hero2b: "result", hero2c: " out.",
+  lede: "Chief first checks what you want, then splits the work across different models in parallel, has them review each other, and merges one answer that shows the disagreements and limits.",
+  ideaLabel: "Your idea", ideaPh: "For example: an AI pet social network where owners scan their real pets into digital twins…",
+  optClarify: "Ask me first, then dispatch", optReview: "Cross-review", optCompare: "Blind test: also ask one model",
+  mode: "Assign", modeDynamic: "Chief picks the models", modeFanout: "Every task to every model", baseline: "Single model", auto: "Auto",
+  budget: "Budget $", maxTasks: "Max tasks", start: "Start ↗", needIdea: "Write an idea first.", submitFailed: "Could not submit: {0}",
+  stripEyebrow: "Blind test · multi-model synthesis vs one model", tallyNone: "No blind tests yet",
+  tallyHow: "Tick “Blind test” when you submit. The two answers are unsigned; you pick the more useful one. Ten votes give a verdict.",
+  tallyTitle: "{0} of {1} votes cast", tallyKeep: "Verdict: multi-model synthesis won {0} times. Task splitting and cross-review are worth keeping.",
+  tallySimplify: "Verdict: multi-model synthesis won only {0} times (needs {1}). Simplify to “ask several, merge once”.",
+  tallyProgress: "MuseOS passes with {0} wins. {1} more votes until a verdict.",
+  cellMuseos: "MuseOS wins", cellSingle: "One model wins", cellTie: "About equal", cellLeft: "To go", goVote: "Vote now ↓",
+  nowTitle: "Current run", nowEmpty: "Write an idea above to start, or open one from the history.",
+  nowIntro: "Each cell is one agent: its role, the model it was given, usage and status.",
+  modelsTitle: "Models available", modelsIntro: "Chief picks a model for each task. “Subscription” uses your own Claude login and has a daily call cap; “API” is billed per use.",
+  demo: "Demo mode: no real model is connected, so answers are placeholder text. Run `museos setup` in a terminal to connect your own API key or subscription, then restart.",
+  noModels: "No models enabled. Check providers.toml.", kindSub: "Subscription", kindMock: "Mock", kindApi: "API", paused: "paused",
+  historyTitle: "History", historyIntro: "Every run is stored in the database on this machine. A run in a blind test hides its result until you vote.",
+  noRuns: "No runs yet.", blindRunning: "Blind test", footer: "MuseOS · runs on this machine only · no login, do not expose it to the internet",
+  spent: "Spent ${0}", doneCount: "{0} / {1} done", cancel: "Cancel", cancelRun: "Cancel this run",
+  agents: "Agents", reviews: "Cross-review", reviewOf: "Review: {0}", tries: "{0} tries",
+  thinking: "Chief is reading your idea to see if it needs to ask anything.", planning: "Chief is splitting the work.",
+  result: "Result", agreements: "Agreements", disagreements: "Disagreements", nextSteps: "Next steps", details: "Open for detail",
+  findings: "Findings", recommendations: "Recommendations", assumptions: "Assumptions", risks: "Risks", evidence: "Evidence", limitations: "Limitations",
+  unfinished: "Tasks that did not finish", eventLog: "Event log",
+  clarifyEyebrow: "Chief wants to check first", clarifyHelp: "Answer what you can. Blank ones fall back to the assumptions below.", answerPh: "One line is enough",
+  ifNoAnswer: "Assumed if you do not answer", goAnswers: "Start with these answers ↗", skip: "Skip, use the assumptions",
+  waitingIntro: "Nothing has been dispatched yet. Agree on the goal first.",
+  blindTitle: "Blind test", blindRunningIntro: "Both sides are answering the same question. Progress is hidden so you cannot tell which is which.",
+  blindEta: "Multi-model usually takes 2 to 3 minutes", blindFailed: "One side did not finish, so this test does not count.", seeRun: "See this run's details",
+  blindReadyIntro: "Both answers address the same question, in the same format, unsigned. Which is more useful to you?", blindVotedIntro: "Vote cast. Here is which was which.",
+  voteA: "A is more useful", voteB: "B is more useful", voteTie: "About equal", notePh: "Optional: why",
+  keyPoints: "Key points", openQuestions: "Unresolved questions",
+  pickedTie: "You chose “about equal”.", pickedMuseos: "You chose {0}: the multi-model synthesis.", pickedSingle: "You chose {0}: the single model.",
+  revealMuseos: "{0} = MuseOS multi-model synthesis ({1}), cost ${2}", revealSingle: "{0} = single model {1}, cost ${2}, took {3} s", yourNote: "Your note: {0}", fullResult: "See the full MuseOS result ↗",
+  role_product_strategist: "Product strategist", role_research_analyst: "Research analyst", role_technical_architect: "Technical architect", role_ux_designer: "UX designer", role_business_analyst: "Business analyst", role_critic: "Critic", role_cross_reviewer: "Cross-reviewer",
+  st_created: "Created", st_clarifying: "Chief is reading", st_awaiting_input: "Waiting for you", st_queued: "Queued", st_planning: "Planning", st_running: "Running", st_reviewing: "Cross-review", st_synthesizing: "Merging",
+  st_completed: "Done", st_partial: "Partly done", st_failed: "Failed", st_cancelled: "Cancelled", st_pending: "Waiting", st_blocked: "Waiting upstream", st_ready: "Ready", st_timed_out: "Timed out", st_skipped: "Skipped"
+},
+fr: {
+  navNow: "Tâche en cours", navBlind: "Test à l'aveugle", navHistory: "Historique", connecting: "Connexion", online: "{0} modèles en ligne", offline: "Connexion impossible",
+  tagline: "Command Center · Votre équipe multi-modèles à vous seul",
+  hero1: "Une idée entre.", hero2a: "Un ", hero2b: "résultat", hero2c: " en sort.",
+  lede: "Chief vérifie d'abord ce que vous voulez, répartit le travail entre plusieurs modèles en parallèle, les fait se relire, puis fusionne une réponse qui montre les désaccords et les limites.",
+  ideaLabel: "Votre idée", ideaPh: "Par exemple : un réseau social pour animaux où l'on scanne son animal pour créer son jumeau numérique…",
+  optClarify: "Me questionner avant de répartir", optReview: "Relecture croisée", optCompare: "Test à l'aveugle : interroger aussi un seul modèle",
+  mode: "Répartition", modeDynamic: "Chief choisit les modèles", modeFanout: "Chaque tâche à tous les modèles", baseline: "Modèle seul", auto: "Auto",
+  budget: "Budget $", maxTasks: "Tâches max", start: "Lancer ↗", needIdea: "Écrivez d'abord une idée.", submitFailed: "Envoi impossible : {0}",
+  stripEyebrow: "Test à l'aveugle · synthèse multi-modèles contre un seul modèle", tallyNone: "Aucun test à l'aveugle",
+  tallyHow: "Cochez « Test à l'aveugle » à l'envoi. Les deux réponses sont anonymes ; vous choisissez la plus utile. Dix votes donnent un verdict.",
+  tallyTitle: "{0} votes sur {1}", tallyKeep: "Verdict : la synthèse multi-modèles a gagné {0} fois. Le découpage en tâches et la relecture croisée valent la peine.",
+  tallySimplify: "Verdict : la synthèse multi-modèles n'a gagné que {0} fois (il en faut {1}). Simplifiez : plusieurs réponses, une seule fusion.",
+  tallyProgress: "MuseOS réussit avec {0} victoires. Encore {1} votes avant le verdict.",
+  cellMuseos: "MuseOS gagne", cellSingle: "Modèle seul gagne", cellTie: "Équivalent", cellLeft: "Restants", goVote: "Voter ↓",
+  nowTitle: "Tâche en cours", nowEmpty: "Écrivez une idée ci-dessus, ou ouvrez-en une dans l'historique.",
+  nowIntro: "Chaque case est un agent : son rôle, le modèle reçu, sa consommation et son état.",
+  modelsTitle: "Modèles disponibles", modelsIntro: "Chief choisit un modèle par tâche. « Abonnement » passe par votre propre connexion Claude, avec un plafond d'appels par jour ; « API » est facturé à l'usage.",
+  demo: "Mode démo : aucun vrai modèle n'est connecté, les réponses sont du texte factice. Lancez `museos setup` dans un terminal pour connecter votre clé API ou votre abonnement, puis redémarrez.",
+  noModels: "Aucun modèle activé. Vérifiez providers.toml.", kindSub: "Abonnement", kindMock: "Simulé", kindApi: "API", paused: "en pause",
+  historyTitle: "Historique", historyIntro: "Chaque exécution est enregistrée dans la base de données de cette machine. Une tâche en test à l'aveugle cache son résultat jusqu'au vote.",
+  noRuns: "Aucune tâche pour l'instant.", blindRunning: "Test à l'aveugle", footer: "MuseOS · fonctionne uniquement sur cette machine · sans connexion, ne l'exposez pas à Internet",
+  spent: "Dépensé {0} $", doneCount: "{0} / {1} terminées", cancel: "Annuler", cancelRun: "Annuler cette tâche",
+  agents: "Agents", reviews: "Relecture croisée", reviewOf: "Relecture : {0}", tries: "{0} essais",
+  thinking: "Chief lit votre idée pour voir s'il doit poser des questions.", planning: "Chief découpe le travail.",
+  result: "Résultat", agreements: "Points d'accord", disagreements: "Points de désaccord", nextSteps: "Prochaines étapes", details: "Ouvrir pour le détail",
+  findings: "Constats", recommendations: "Recommandations", assumptions: "Hypothèses", risks: "Risques", evidence: "Preuves", limitations: "Limites",
+  unfinished: "Tâches non terminées", eventLog: "Journal des événements",
+  clarifyEyebrow: "Chief veut d'abord vérifier", clarifyHelp: "Répondez à ce que vous pouvez. Les champs vides reprennent les hypothèses ci-dessous.", answerPh: "Une ligne suffit",
+  ifNoAnswer: "Hypothèses si vous ne répondez pas", goAnswers: "Lancer avec ces réponses ↗", skip: "Passer, garder les hypothèses",
+  waitingIntro: "Rien n'a encore été réparti. Mettons-nous d'abord d'accord sur l'objectif.",
+  blindTitle: "Test à l'aveugle", blindRunningIntro: "Les deux côtés répondent à la même question. La progression est cachée pour que vous ne puissiez pas les reconnaître.",
+  blindEta: "Le multi-modèles prend en général 2 à 3 minutes", blindFailed: "Un côté n'a pas terminé : ce test ne compte pas.", seeRun: "Voir le détail de cette exécution",
+  blindReadyIntro: "Les deux réponses traitent la même question, au même format, sans signature. Laquelle vous est la plus utile ?", blindVotedIntro: "Vote enregistré. Voici qui était qui.",
+  voteA: "A est plus utile", voteB: "B est plus utile", voteTie: "Équivalent", notePh: "Facultatif : pourquoi",
+  keyPoints: "Points clés", openQuestions: "Questions non résolues",
+  pickedTie: "Vous avez choisi « équivalent ».", pickedMuseos: "Vous avez choisi {0} : la synthèse multi-modèles.", pickedSingle: "Vous avez choisi {0} : le modèle seul.",
+  revealMuseos: "{0} = synthèse multi-modèles MuseOS ({1}), coût {2} $", revealSingle: "{0} = modèle seul {1}, coût {2} $, durée {3} s", yourNote: "Votre note : {0}", fullResult: "Voir le résultat MuseOS complet ↗",
+  role_product_strategist: "Stratège produit", role_research_analyst: "Analyste de recherche", role_technical_architect: "Architecte technique", role_ux_designer: "Designer UX", role_business_analyst: "Analyste métier", role_critic: "Critique", role_cross_reviewer: "Relecteur",
+  st_created: "Créée", st_clarifying: "Chief lit l'idée", st_awaiting_input: "En attente de vous", st_queued: "En file", st_planning: "Planification", st_running: "En cours", st_reviewing: "Relecture croisée", st_synthesizing: "Fusion",
+  st_completed: "Terminée", st_partial: "Partielle", st_failed: "Échec", st_cancelled: "Annulée", st_pending: "En attente", st_blocked: "Attend l'amont", st_ready: "Prête", st_timed_out: "Délai dépassé", st_skipped: "Ignorée"
+},
+zh: {
+  navNow: "当前任务", navBlind: "盲测", navHistory: "历史", connecting: "连接中", online: "{0} 个模型在线", offline: "连接失败",
+  tagline: "Command Center · 你一个人的多模型团队",
+  hero1: "一个想法进来。", hero2a: "一份", hero2b: "结果", hero2c: "出来。",
+  lede: "Chief 先确认你想要什么，再把任务分给不同模型并行做，互相审查，最后合成一份带分歧和局限的结论。",
+  ideaLabel: "你的想法", ideaPh: "比如：做一个 AI 宠物社交网络，用户扫描真实宠物生成数字分身……",
+  optClarify: "先问清楚再分发", optReview: "交叉审查", optCompare: "盲测：同时问单个模型",
+  mode: "分配", modeDynamic: "Chief 自动选模型", modeFanout: "每个任务发给所有模型", baseline: "单模型对手", auto: "自动",
+  budget: "预算 $", maxTasks: "最多任务", start: "开始 ↗", needIdea: "先写下想法。", submitFailed: "提交失败：{0}",
+  stripEyebrow: "盲测 · 多模型合成 对 单个模型", tallyNone: "还没有盲测",
+  tallyHow: "勾选「盲测」提交想法。两份答案不署名，你选更有用的那份。投满 10 次出结论。",
+  tallyTitle: "已投 {0} / {1}", tallyKeep: "结论：多模型合成赢了 {0} 次，值得保留拆任务和互审。",
+  tallySimplify: "结论：多模型合成只赢了 {0} 次（需要 {1}）。建议简化成「一问多答 + 一键合成」。",
+  tallyProgress: "MuseOS 赢满 {0} 次才算通过。还差 {1} 票出结论。",
+  cellMuseos: "MuseOS 胜", cellSingle: "单模型胜", cellTie: "差不多", cellLeft: "还差", goVote: "去投票 ↓",
+  nowTitle: "当前任务", nowEmpty: "在上面写下一个想法开始，或从历史里点开一个。",
+  nowIntro: "每个格子是一个 Agent：它的角色、被分到的模型、用量和状态。",
+  modelsTitle: "可用的模型", modelsIntro: "Chief 按任务需要挑模型。「订阅」走你自己的 Claude 登录，每天有调用上限；「API」按量计费。",
+  demo: "演示模式：还没有连接真实模型，回答都是占位文字。在终端运行 `museos setup` 接入你自己的 API key 或订阅，然后重启。",
+  noModels: "没有启用的模型。检查 providers.toml。", kindSub: "订阅", kindMock: "模拟", kindApi: "API", paused: "暂停",
+  historyTitle: "历史", historyIntro: "每次运行都存在你本机的数据库里。盲测中的任务在投票前不显示结果。",
+  noRuns: "还没有任务。", blindRunning: "盲测中", footer: "MuseOS · 只在本机运行 · 没有登录保护，不要暴露到公网",
+  spent: "花费 ${0}", doneCount: "{0} / {1} 完成", cancel: "取消", cancelRun: "取消这个任务",
+  agents: "Agents", reviews: "交叉审查", reviewOf: "审查：{0}", tries: "{0} 次",
+  thinking: "Chief 正在读你的想法，看有没有需要先问的。", planning: "Chief 正在拆任务。",
+  result: "结果", agreements: "共识", disagreements: "分歧", nextSteps: "下一步", details: "展开看细节",
+  findings: "发现", recommendations: "建议", assumptions: "假设", risks: "风险", evidence: "证据", limitations: "局限",
+  unfinished: "没完成的任务", eventLog: "事件日志",
+  clarifyEyebrow: "Chief 想先确认", clarifyHelp: "回答能回答的，留空的按下面的假设处理。", answerPh: "一句话就行",
+  ifNoAnswer: "不回答时的假设", goAnswers: "按这些回答开始 ↗", skip: "跳过，按假设开始",
+  waitingIntro: "还没有分发任何任务。先把目标对齐。",
+  blindTitle: "盲测", blindRunningIntro: "两边正在各自回答同一个问题。过程不显示，免得你认出哪份是哪份。",
+  blindEta: "多模型通常要 2 到 3 分钟", blindFailed: "有一边没有完成，这次盲测不计入。", seeRun: "看这次运行的详情",
+  blindReadyIntro: "两份答案回答的是同一个问题，格式相同，不署名。哪份对你更有用？", blindVotedIntro: "已投票。下面是谜底。",
+  voteA: "A 更有用", voteB: "B 更有用", voteTie: "差不多", notePh: "可选：为什么选它",
+  keyPoints: "要点", openQuestions: "没解决的问题",
+  pickedTie: "你选了「差不多」。", pickedMuseos: "你选了 {0}，是多模型合成。", pickedSingle: "你选了 {0}，是单个模型。",
+  revealMuseos: "{0} = MuseOS 多模型合成（{1}），花费 ${2}", revealSingle: "{0} = 单个模型 {1}，花费 ${2}，用时 {3} 秒", yourNote: "你的备注：{0}", fullResult: "看 MuseOS 的完整结果 ↗",
+  role_product_strategist: "产品策略", role_research_analyst: "研究分析", role_technical_architect: "技术架构", role_ux_designer: "UX 设计", role_business_analyst: "商业分析", role_critic: "反方审查", role_cross_reviewer: "交叉审查",
+  st_created: "已创建", st_clarifying: "Chief 在理解想法", st_awaiting_input: "等你回答", st_queued: "排队", st_planning: "拆任务", st_running: "进行中", st_reviewing: "交叉审查", st_synthesizing: "合成中",
+  st_completed: "完成", st_partial: "部分完成", st_failed: "失败", st_cancelled: "已取消", st_pending: "等待", st_blocked: "等上游", st_ready: "就绪", st_timed_out: "超时", st_skipped: "跳过"
+}};
+const LANGS = ["en", "fr", "zh"];
+const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
+const guess = () => { const n = (navigator.language || "en").toLowerCase(); return n.startsWith("zh") ? "zh" : n.startsWith("fr") ? "fr" : "en"; };
+let lang = LANGS.includes(store.get("museos.lang")) ? store.get("museos.lang") : guess();
+const t = (key, ...args) => { let s = I18N[lang][key] ?? I18N.en[key] ?? key; args.forEach((v, i) => { s = s.split("{" + i + "}").join(v); }); return s; };
+
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const api = async (path, opts) => {
+  const r = await fetch(path, opts);
+  if (!r.ok) { let m = await r.text(); try { m = JSON.parse(m).detail || m; } catch (e) {} throw new Error(String(typeof m === "string" ? m : JSON.stringify(m)).slice(0, 300)); }
+  return r.json();
+};
+const post = (path, body) => api(path, {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(body || {})});
+const label = s => I18N[lang]["st_" + s] ?? I18N.en["st_" + s] ?? s;
+const role = r => I18N[lang]["role_" + r] ?? I18N.en["role_" + r] ?? String(r).replace(/_/g, " ");
+const TERMINAL = ["completed", "failed", "partial", "cancelled"];
+const LIVE = ["clarifying", "queued", "planning", "running", "reviewing", "synthesizing", "created"];
+const pillClass = s => LIVE.includes(s) ? "is-live" : (s === "failed" || s === "timed_out") ? "is-bad" : s === "awaiting_input" ? "is-wait" : "";
+const pill = s => { const p = el("span", "pill " + pillClass(s)); p.append(el("i"), document.createTextNode(label(s))); return p; };
+let view = null, timer = null, online = null, lastSide = null;
+
+function applyStatic() {
+  document.documentElement.lang = lang === "zh" ? "zh-Hans" : lang;
+  document.querySelectorAll("[data-i18n]").forEach(e => { e.textContent = t(e.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-ph]").forEach(e => { e.placeholder = t(e.dataset.i18nPh); });
+  document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  $("health").lastChild.textContent = online == null ? t("connecting") : online < 0 ? t("offline") : t("online", online);
+  if (!view) $("stage").replaceChildren(head(t("nowTitle"), t("nowEmpty")));
+  if (lastSide) renderSide(...lastSide);
+}
+document.querySelectorAll(".lang button").forEach(b => b.onclick = () => {
+  lang = b.dataset.lang; store.set("museos.lang", lang); applyStatic();
+  if (view) { clearTimeout(timer); tick(); }
+});
+
+function head(title, intro) { const h = el("div", "head"); h.append(el("h2", "t-h2", title), el("p", null, intro || "")); return h; }
+function bullets(parent, title, items) {
+  if (!items || !items.length) return;
+  if (title) parent.append(el("p", "eyebrow sub", title));
+  const ul = el("ul", "rows"); items.forEach(x => ul.append(el("li", null, typeof x === "string" ? x : (x.claim || JSON.stringify(x))))); parent.append(ul);
+}
+function fold(parent, title, build) { const d = el("details"); d.append(el("summary", null, title)); const body = el("div"); build(body); d.append(body); parent.append(d); }
+
+function renderSide(ps, rs, cs) {
+  const on = ps.filter(p => p.enabled);
+  const box = $("providers"); box.replaceChildren();
+  on.forEach(p => {
+    const row = el("div", "item");
+    row.append(el("span", "item__t", p.display_name || p.id), el("span", "item__s", (p.subscription ? t("kindSub") : p.adapter === "mock" ? t("kindMock") : t("kindApi")) + (p.healthy ? "" : " · " + t("paused"))));
+    box.append(row);
+  });
+  if (!on.length) box.append(el("p", "soft", t("noModels")));
+  $("demo").hidden = !(on.length && on.every(p => p.adapter === "mock"));
+  const sel = $("baseline"), keep = sel.value; sel.replaceChildren(new Option(t("auto"), ""));
+  on.forEach(p => sel.add(new Option(p.display_name || p.id, p.id))); sel.value = keep;
+
+  const list = $("runs"); list.replaceChildren();
+  rs.forEach(r => {
+    const row = el("button", "item"); row.type = "button";
+    row.append(el("span", "item__t", r.idea), el("span", "item__s", r.blind ? t("blindRunning") : label(r.status)));
+    row.onclick = () => { r.blind ? openCmp(r.comparison_id) : openRun(r.run_id); $("now").scrollIntoView(); };
+    list.append(row);
+  });
+  if (!rs.length) list.append(el("p", null, t("noRuns")));
+
+  const ty = cs.tally, left = Math.max(ty.target - ty.voted, 0);
+  const cells = $("cells").querySelectorAll("b");
+  [ty.museos_wins, ty.baseline_wins, ty.ties, left].forEach((v, i) => { cells[i].textContent = v; });
+  const any = ty.voted || cs.items.length;
+  $("tallytitle").textContent = any ? t("tallyTitle", ty.voted, ty.target) : t("tallyNone");
+  $("tallynote").textContent = !any ? t("tallyHow") : ty.verdict === "keep_multi_agent" ? t("tallyKeep", ty.museos_wins)
+    : ty.verdict === "simplify" ? t("tallySimplify", ty.museos_wins, ty.pass_wins) : t("tallyProgress", ty.pass_wins, left);
+  const ready = cs.items.find(c => c.state === "ready");
+  $("nextblind").hidden = !ready;
+  $("nextblind").onclick = () => { openCmp(ready.comparison_id); $("now").scrollIntoView(); };
+}
+async function loadSide() {
+  try {
+    lastSide = await Promise.all([api("/providers"), api("/runs?limit=14"), api("/comparisons")]);
+    online = lastSide[0].filter(p => p.enabled).length;
+    $("health").lastChild.textContent = t("online", online);
+    renderSide(...lastSide);
+  } catch (e) { online = -1; $("health").lastChild.textContent = t("offline"); }
+}
+
+$("compare").onchange = () => { $("baselinewrap").hidden = !$("compare").checked; };
+$("form").onsubmit = async ev => {
+  ev.preventDefault();
+  const idea = $("idea").value.trim(); $("formerr").textContent = "";
+  if (idea.length < 3) { $("formerr").textContent = t("needIdea"); return; }
+  $("go").disabled = true;
+  try {
+    const r = await post("/runs", {idea, language: lang, clarify: $("clarify").checked, cross_review: $("review").checked, compare: $("compare").checked,
+      baseline_provider: $("baseline").value || null, mode: $("mode").value, budget_usd: Number($("budget").value), max_tasks: Number($("maxtasks").value)});
+    r.comparison_id ? openCmp(r.comparison_id) : openRun(r.run_id);
+    $("now").scrollIntoView(); loadSide();
+  } catch (e) { $("formerr").textContent = t("submitFailed", e.message); }
+  $("go").disabled = false;
+};
+
+function openRun(id) { view = {kind: "run", id}; clearTimeout(timer); tick(); }
+function openCmp(id) { view = {kind: "cmp", id}; clearTimeout(timer); tick(); }
+async function tick() {
+  if (!view) return;
+  const mine = view;
+  try {
+    if (mine.kind === "run") {
+      const [run, events] = await Promise.all([api("/runs/" + mine.id), api("/runs/" + mine.id + "/events")]);
+      if (mine !== view) return;
+      if (run.blind) return openCmp(run.comparison_id);
+      renderRun(run, events);
+      // Polling stops while the page waits on your answers, so typing is never wiped.
+      if (LIVE.includes(run.status)) timer = setTimeout(tick, 1500); else loadSide();
+    } else {
+      const c = await api("/comparisons/" + mine.id);
+      if (mine !== view) return;
+      if (c.state === "awaiting_input") { const run = await api("/runs/" + c.run_id); if (mine !== view) return; renderWaiting(run, true); return; }
+      renderCmp(c);
+      if (c.state === "running") timer = setTimeout(tick, 2000); else loadSide();
+    }
+  } catch (e) { timer = setTimeout(tick, 3000); }
+}
+
+function clarifyNote(run) {
+  const c = run.clarification, note = el("form", "note");
+  note.append(el("p", "eyebrow", t("clarifyEyebrow")), el("h3", null, c.goal), el("p", null, t("clarifyHelp")));
+  const inputs = c.questions.map(q => {
+    const lab = el("label", "q", q), inp = el("input", "field"); inp.type = "text"; inp.placeholder = t("answerPh"); lab.append(inp); note.append(lab); return inp;
+  });
+  if (c.assumptions.length) {
+    const al = el("p", "label", t("ifNoAnswer")); al.style.marginTop = "22px"; note.append(al);
+    const ul = el("ul"); ul.style.margin = "6px 0 0"; ul.style.paddingLeft = "20px"; c.assumptions.forEach(a => ul.append(el("li", null, a))); note.append(ul);
+  }
+  const row = el("div", "vote"), go = el("button", "btn", t("goAnswers")), skip = el("button", "btn btn--ghost", t("skip"));
+  go.type = "submit"; skip.type = "button"; row.append(go, skip); note.append(row);
+  const err = el("p", "msg"); note.append(err);
+  const send = async body => {
+    go.disabled = skip.disabled = true;
+    try { await post("/runs/" + run.run_id + "/answers", body); tick(); } catch (e) { err.textContent = e.message; go.disabled = skip.disabled = false; }
+  };
+  note.onsubmit = ev => { ev.preventDefault(); send({answers: inputs.map(i => i.value)}); };
+  skip.onclick = () => send({skip: true});
+  return note;
+}
+function renderWaiting(run, blind) {
+  const p = $("stage"); p.replaceChildren(head(blind ? t("blindTitle") : t("nowTitle"), t("waitingIntro")));
+  p.append(el("h3", "t-h4", run.idea));
+  const st = el("div", "status"); st.append(pill(run.status)); p.append(st);
+  p.append(clarifyNote(run));
+  const c = el("button", "btn btn--ghost", t("cancelRun")); c.type = "button";
+  c.onclick = async () => { await post("/runs/" + run.run_id + "/cancel"); tick(); }; p.append(c);
+}
+
+function renderRun(run, events) {
+  if (run.status === "awaiting_input" && run.clarification) return renderWaiting(run, false);
+  const p = $("stage"); p.replaceChildren(head(t("nowTitle"), t("nowIntro")));
+  p.append(el("h3", "t-h4", run.idea));
+  const all = [...run.tasks, ...Object.values(run.chief || {})];
+  const tok = all.reduce((a, x) => a + x.input_tokens + x.output_tokens, 0);
+  const st = el("div", "status"); st.append(pill(run.status),
+    el("span", "label", t("spent", run.spent_usd.toFixed(4))), el("span", "label", tok.toLocaleString() + " tokens"),
+    el("span", "label", t("doneCount", run.tasks.filter(x => x.status === "completed").length, run.tasks.length)));
+  if (!TERMINAL.includes(run.status)) { const c = el("button", "btn btn--ghost", t("cancel")); c.type = "button"; c.style.padding = "6px 14px"; c.onclick = () => post("/runs/" + run.run_id + "/cancel"); st.append(c); }
+  p.append(st);
+  if (run.error) p.append(el("p", "msg", run.error));
+
+  [[t("agents"), run.tasks.filter(x => x.kind !== "review")], [t("reviews"), run.tasks.filter(x => x.kind === "review")]].forEach(([title, tasks]) => {
+    if (!tasks.length) return;
+    p.append(el("p", "eyebrow sub", title));
+    const g = el("div", "matrix");
+    tasks.forEach((x, i) => {
+      const c = el("div", "cell " + (x.status === "running" ? "is-live" : (x.status === "failed" || x.status === "timed_out") ? "is-bad" : ""));
+      const no = el("div", "cell__no"); no.append(el("span", null, String(i + 1).padStart(2, "0")), el("span", null, label(x.status))); c.append(no);
+      const name = x.kind === "review" ? t("reviewOf", x.task_id.replace(/^review__/, "").replace(/_/g, " ")) : (x.title || x.task_id.replace(/_/g, " "));
+      c.append(el("div", "cell__title", name), el("div", "cell__meta", role(x.role)));
+      if (x.provider) c.append(el("span", "tag", x.provider));
+      if (x.attempts) { const m = el("div", "cell__meta", (x.input_tokens + x.output_tokens).toLocaleString() + " tok · $" + x.cost_usd.toFixed(4) + " · " + Math.round(x.latency_ms / 1000) + "s" + (x.attempts > 1 ? " · " + t("tries", x.attempts) : "")); m.style.marginTop = "8px"; c.append(m); }
+      if (x.error) c.append(el("p", "msg", x.error));
+      g.append(c);
+    });
+    p.append(g);
+  });
+  if (!run.tasks.length && !TERMINAL.includes(run.status)) p.append(el("p", "t-lede", run.status === "clarifying" ? t("thinking") : t("planning")));
+
+  const d = run.deliverable;
+  if (d) {
+    p.append(el("p", "eyebrow sub", t("result"))); p.append(el("p", "t-lede", d.executive_summary));
+    bullets(p, t("agreements"), d.agreements); bullets(p, t("disagreements"), d.disagreements); bullets(p, t("nextSteps"), d.next_steps);
+    p.append(el("p", "eyebrow sub", t("details")));
+    d.sections.forEach(s => fold(p, role(s.role) + " · " + (s.provider || ""), b => { b.append(el("p", null, s.summary)); bullets(b, t("findings"), s.findings); bullets(b, t("recommendations"), s.recommendations); }));
+    [[t("assumptions"), d.assumptions], [t("risks"), d.risks], [t("evidence"), d.evidence], [t("limitations"), d.limitations]].forEach(([title, items]) => { if (items && items.length) fold(p, title + " · " + items.length, b => bullets(b, "", items)); });
+    if (d.failed_tasks.length) bullets(p, t("unfinished"), d.failed_tasks.map(f => f.task_id + ": " + (f.error || f.status)));
+  }
+  fold(p, t("eventLog") + " · " + events.length, b => {
+    const log = el("div", "log");
+    events.slice(-120).forEach(e => log.append(el("div", null, e.occurred_at.slice(11, 19) + "  " + e.event_type + (e.task_id ? "  " + e.task_id : "") + (e.payload.provider ? "  → " + e.payload.provider : ""))));
+    b.append(log);
+  });
+}
+
+function sideCard(letter, brief) {
+  const s = el("article", "side"); s.append(el("div", "side__letter", letter), el("p", "t-lede", brief.executive_summary));
+  [[t("keyPoints"), brief.key_points], [t("openQuestions"), brief.open_questions], [t("nextSteps"), brief.next_steps], [t("risks"), brief.risks], [t("assumptions"), brief.assumptions]].forEach(([title, items]) => {
+    if (!items.length) return; s.append(el("h3", null, title)); const ul = el("ul"); items.forEach(x => ul.append(el("li", null, x))); s.append(ul);
+  });
+  return s;
+}
+function renderCmp(c) {
+  const p = $("stage");
+  if (c.state === "running") {
+    p.replaceChildren(head(t("blindTitle"), t("blindRunningIntro")));
+    p.append(el("h3", "t-h4", c.idea)); const st = el("div", "status"); st.append(pill("running"), el("span", "label", t("blindEta"))); p.append(st); return;
+  }
+  if (c.state === "failed") {
+    p.replaceChildren(head(t("blindTitle"), t("blindFailed"))); p.append(el("h3", "t-h4", c.idea));
+    const b = el("button", "btn btn--ghost", t("seeRun")); b.type = "button"; b.style.marginTop = "24px";
+    b.onclick = async () => { view = null; clearTimeout(timer); const [run, events] = await Promise.all([api("/runs/" + c.run_id), api("/runs/" + c.run_id + "/events")]); view = {kind: "peek", id: c.run_id}; renderRun(run, events); };
+    p.append(b); return;
+  }
+  p.replaceChildren(head(t("blindTitle"), c.state === "voted" ? t("blindVotedIntro") : t("blindReadyIntro")));
+  const idea = el("h3", "t-h4", c.idea); idea.style.marginBottom = "30px"; p.append(idea);
+  const ab = el("div", "ab"); ab.append(sideCard("A", c.A), sideCard("B", c.B)); p.append(ab);
+  if (c.state === "ready") {
+    const note = el("input", "field"); note.type = "text"; note.placeholder = t("notePh"); note.style.cssText = "max-width:420px;box-shadow:none;padding:11px 12px;font-size:1rem";
+    const row = el("div", "vote"), err = el("p", "msg");
+    [[t("voteA"), "A", "btn"], [t("voteB"), "B", "btn"], [t("voteTie"), "tie", "btn btn--ghost"]].forEach(([text, v, cls]) => {
+      const b = el("button", cls, text); b.type = "button";
+      b.onclick = async () => { try { renderCmp(await post("/comparisons/" + c.comparison_id + "/vote", {choice: v, note: note.value || null})); loadSide(); } catch (e) { err.textContent = e.message; } };
+      row.append(b);
+    });
+    row.append(note); p.append(row, err);
+  } else {
+    const r = c.reveal, other = r.museos_slot === "A" ? "B" : "A", box = el("div", "reveal");
+    box.append(el("p", "t-lede", r.choice === "tie" ? t("pickedTie") : r.choice === r.museos_slot ? t("pickedMuseos", r.choice) : t("pickedSingle", r.choice)));
+    box.append(el("p", null, t("revealMuseos", r.museos_slot, r.museos.providers.join(", "), r.museos.cost_usd.toFixed(4))));
+    box.append(el("p", null, t("revealSingle", other, r.baseline.provider || "", r.baseline.cost_usd.toFixed(4), Math.round(r.baseline.latency_ms / 1000))));
+    if (r.note) box.append(el("p", "label", t("yourNote", r.note)));
+    const b = el("button", "btn", t("fullResult")); b.type = "button"; b.style.marginTop = "16px"; b.onclick = () => openRun(c.run_id); box.append(b);
+    p.append(box);
+  }
+}
+
+applyStatic(); loadSide(); setInterval(loadSide, 20000);
+</script>
+</body>
+</html>
