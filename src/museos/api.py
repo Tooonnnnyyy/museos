@@ -51,6 +51,24 @@ def create_app(settings: Settings | None = None, registry: ProviderRegistry | No
     async def command_center() -> str:
         return (Path(__file__).parent / "web" / "index.html").read_text(encoding="utf-8")
 
+    @app.get("/admin", response_class=HTMLResponse, include_in_schema=False)
+    async def admin_page() -> str:
+        return (Path(__file__).parent / "web" / "admin.html").read_text(encoding="utf-8")
+
+    @app.get("/admin/summary")
+    async def admin_summary() -> dict[str, Any]:
+        from museos.admin import summarize
+
+        return await summarize(app.state.store, app.state.registry, settings)
+
+    @app.post("/admin/providers/{provider_id}/reset")
+    async def admin_reset_provider(provider_id: str) -> dict[str, Any]:
+        """Close a provider's circuit breaker so it is tried again at once."""
+        if provider_id not in app.state.registry.configs:
+            raise HTTPException(404, "provider not found")
+        app.state.registry.record_success(provider_id)
+        return {"provider": provider_id, "healthy": app.state.registry.is_healthy(provider_id)}
+
     @app.get("/runs")
     async def list_runs(limit: int = Query(20, ge=1, le=100)) -> list[dict[str, Any]]:
         cmps = {c.run_id: c for c in await app.state.store.list_comparisons(500)}

@@ -91,6 +91,14 @@ attention pays off most. Each agent's own output, assumptions, risks and limits 
 useful one; only then does the page say which was which. The yellow strip keeps the score: ten votes,
 and the multi-model route passes with six wins.
 
+**Small requests skip the team.** With "Ask me first" on, Chief first decides what kind of request it is. A
+simple question gets one direct answer. A request to *do* something (open, send, install) gets a plain
+"MuseOS cannot perform actions" plus the steps you can run yourself. Only real project ideas go to the team.
+
+**Admin page.** http://127.0.0.1:8000/admin shows usage, cost and failures per model, the last 14 days of
+spend, and current settings. It is read-only, apart from retrying a model that was paused after repeated
+failures. Keys are shown only as present or missing.
+
 **Languages.** The `EN / FR / 中文` switch sets the page language and the output language of the next run,
 whatever language the idea is written in. Finished runs keep their language.
 
@@ -143,6 +151,8 @@ Run options (`museos run` flags and `POST /runs` fields):
 | `GET /runs/{id}/events`, `/audit` | Event log; every model attempt, policy decision and usage record |
 | `GET /comparisons`, `GET /comparisons/{id}` | Blind-test tally; two unsigned answers |
 | `POST /comparisons/{id}/vote` | `{"choice": "A"\|"B"\|"tie"}`; reveals which was which |
+| `GET /admin`, `GET /admin/summary` | Admin page and its numbers (no secrets) |
+| `POST /admin/providers/{id}/reset` | Retry a model paused by the circuit breaker |
 | `GET /providers`, `GET /health` | Configured models (no secrets); liveness |
 
 ## Development

@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import event as sa_event
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -238,6 +239,16 @@ class Store:
             for k, v in fields.items():
                 setattr(row, k, v)
             await s.commit()
+
+    async def delete_comparison(self, comparison_id: str) -> None:
+        async with self.sessions() as s:
+            await s.execute(sa_delete(ComparisonRow).where(ComparisonRow.id == comparison_id))
+            await s.commit()
+
+    async def recent(self, model: type[Base], limit: int = 5000) -> list[Any]:
+        """Newest rows of one table, for the admin summary. Local, single-user data stays small."""
+        async with self.sessions() as s:
+            return list((await s.execute(select(model).order_by(model.created_at.desc()).limit(limit))).scalars())
 
     async def find_event(self, run_id: str, event_type: str) -> EventRow | None:
         async with self.sessions() as s:

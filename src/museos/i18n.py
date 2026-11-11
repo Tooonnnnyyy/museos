@@ -77,6 +77,16 @@ _NOTES: dict[str, dict[str, str]] = {
         "fr": "Le fournisseur choisi n'a pas les capacités demandées : {caps}",
         "zh": "所选模型缺少任务要求的能力：{caps}",
     },
+    "direct_answer": {
+        "en": "Answered directly by one model ({provider}); no team was dispatched because the request did not need one.",
+        "fr": "Réponse directe d'un seul modèle ({provider}) ; aucune équipe n'a été mobilisée, la demande n'en avait pas besoin.",
+        "zh": "由一个模型（{provider}）直接回答；这个请求不需要团队，所以没有分发任务。",
+    },
+    "cannot_act": {
+        "en": "MuseOS cannot perform actions on your computer or online. It only analyses and answers.",
+        "fr": "MuseOS ne peut effectuer aucune action sur votre ordinateur ni en ligne. Il se limite à analyser et répondre.",
+        "zh": "MuseOS 不能在你的电脑上或网上执行操作，它只做分析和回答。",
+    },
     "no_evidence": {
         "en": "No external evidence was retrieved in this run.",
         "fr": "Aucune preuve externe n'a été récupérée pendant cette exécution.",

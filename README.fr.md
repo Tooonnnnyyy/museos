@@ -66,6 +66,10 @@ Vous saisissez vous-même l'identifiant du modèle, car il change souvent : copi
 
 **5. Voter au test à l'aveugle.** Une exécution en test à l'aveugle cache sa progression. Quand les deux côtés ont terminé, la page affiche A et B. Choisissez la plus utile ; c'est seulement après le vote que la page indique laquelle était la synthèse multi-modèles. La bande jaune tient le score : après 10 votes, MuseOS réussit avec 6 victoires. Sinon, il faut simplifier le système : plusieurs réponses, une seule fusion.
 
+**Les petites demandes ne mobilisent pas l'équipe.** Avec « Me questionner » activé, Chief détermine d'abord le type de demande. Une question simple reçoit une réponse directe. Une demande d'action (ouvrir, envoyer, installer) reçoit un message clair, « MuseOS ne peut effectuer aucune action », avec les étapes à lancer vous-même. Seules les vraies idées de projet vont à l'équipe.
+
+**Page d'administration.** http://127.0.0.1:8000/admin affiche l'utilisation, le coût et les échecs par modèle, les dépenses des 14 derniers jours et les réglages. Elle est en lecture seule, sauf pour relancer un modèle mis en pause. Les clés sont seulement indiquées comme présentes ou absentes.
+
 **Langues.** La page, les réponses des modèles et les notes du système existent en anglais, en français et en chinois simplifié. Utilisez le sélecteur `EN / FR / 中文` en haut : il fixe la langue de la page et celle de la prochaine exécution, quelle que soit la langue de l'idée. Les exécutions terminées gardent leur langue d'origine. Par l'API, envoyez `"language": "en" | "fr" | "zh"` ; en ligne de commande, utilisez `--lang`. Sans indication, les modèles suivent la langue de l'idée.
 
 **Ligne de commande** (sans la page web) :

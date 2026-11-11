@@ -277,14 +277,62 @@ def test_run_in_french_localizes_system_notes_and_markdown(client):
     assert client.post("/runs", json={"idea": "bad language", "language": "de"}).status_code == 422
 
 
-def test_page_has_the_same_keys_in_all_three_languages():
+@pytest.mark.parametrize("page,minimum", [("index.html", 100), ("admin.html", 50)])
+def test_page_has_the_same_keys_in_all_three_languages(page, minimum):
     import re
     from pathlib import Path
-    html = Path("src/museos/web/index.html").read_text(encoding="utf-8")
+    html = Path("src/museos/web", page).read_text(encoding="utf-8")
     blocks = {}
     for lang, nxt in (("en", "\nfr: {"), ("fr", "\nzh: {"), ("zh", "\n}};")):
         start = html.index(f"\n{lang}: {{")
         blocks[lang] = set(re.findall(r'(?:^|[\s,{])([A-Za-z_][A-Za-z0-9_]*): "', html[start:html.index(nxt, start)]))
-    assert len(blocks["en"]) > 100 and blocks["en"] == blocks["fr"] == blocks["zh"]
+    assert len(blocks["en"]) > minimum and blocks["en"] == blocks["fr"] == blocks["zh"]
     used = set(re.findall(r'data-i18n(?:-ph)?="([^"]+)"', html)) | set(re.findall(r'\bt\("([A-Za-z_0-9]+)"', html))
     assert used <= blocks["en"]
+
+
+# ---------------------------------------------------------------- triage
+def _direct_client(tmp_path, kind):
+    settings = Settings(database_url=f"sqlite+aiosqlite:///{tmp_path / 't.db'}", retry_backoff_s=0,
+                        allowed_hosts=["testserver"])
+    return TestClient(create_app(settings, ProviderRegistry.from_configs([mock_cfg("alpha", direct_kind=kind)])))
+
+
+def test_action_request_is_answered_directly_without_a_team(tmp_path):
+    with _direct_client(tmp_path, "action") as c:
+        r = c.post("/runs", json={"idea": "open google in my chrome", "clarify": True, "compare": True,
+                                  "language": "zh"}).json()
+        rid = r["run_id"]
+        _wait_status(c, rid, {"completed"})
+        view = c.get(f"/runs/{rid}").json()
+        d = view["deliverable"]
+        assert view["tasks"] == [] and view["plan"] is None  # nothing was planned or dispatched
+        assert d["synthesis_source"] == "direct" and "Direct answer" in d["executive_summary"]
+        assert "不能" in d["limitations"][0] and view["comparison_id"] is None  # no blind test for it
+        audit = c.get(f"/runs/{rid}/audit").json()
+        assert [a["task"] for a in audit["agent_runs"]] == ["__clarify__"]  # exactly one model call
+
+
+def test_simple_question_is_answered_directly(tmp_path):
+    with _direct_client(tmp_path, "question") as c:
+        rid = c.post("/runs", json={"idea": "what is a DAG", "clarify": True}).json()["run_id"]
+        _wait_status(c, rid, {"completed"})
+        d = c.get(f"/runs/{rid}").json()["deliverable"]
+        assert len(d["limitations"]) == 1 and "directly" in d["limitations"][0]
+
+
+# ---------------------------------------------------------------- admin
+def test_admin_summary_counts_and_hides_secrets(client):
+    client.post("/runs?wait=true", json={"idea": "Admin numbers", "max_tasks": 2, "cross_review": True})
+    s = client.get("/admin/summary").json()
+    assert s["totals"]["runs"] == 1 and s["totals"]["model_calls"] >= 4 and s["totals"]["cost_usd"] > 0
+    by_id = {p["id"]: p for p in s["providers"]}
+    assert by_id["alpha"]["attempts"] >= 1 and by_id["alpha"]["calls_24h"] == by_id["alpha"]["attempts"]
+    assert by_id["real"]["key"] == "set" and by_id["real"]["enabled"] is False
+    assert sum(d["runs"] for d in s["by_day"]) == 1 and len(s["by_day"]) == 14
+    assert s["settings"]["database"] == "sqlite" and s["settings"]["login"] is False
+    text = client.get("/admin/summary").text
+    assert SECRET not in text and "sqlite+aiosqlite" not in text  # no key, no connection string
+    assert client.get("/admin").status_code == 200
+    assert client.post("/admin/providers/alpha/reset").json()["healthy"] is True
+    assert client.post("/admin/providers/nope/reset").status_code == 404

@@ -24,6 +24,7 @@ class MockBehavior:
     fail_retryable: bool = True
     malformed: bool = False  # return non-JSON text
     hang: bool = False  # never return (exercise timeouts)
+    direct_kind: str = ""  # clarify step classifies the request as 'question' or 'action'
     no_questions: bool = False  # clarify step returns no questions
     truncate_below: int = 0  # if max_tokens < this, return cut-off JSON with finish_reason=length
 
@@ -92,7 +93,11 @@ class MockProvider:
         if purpose == "plan":
             return self._plan(idea, int(md.get("max_tasks", 6)))
         if purpose == "clarify":
+            if self.behavior.direct_kind:
+                return {"kind": self.behavior.direct_kind, "answer": f"{tag} Direct answer to: {idea}",
+                        "goal": idea or "request", "questions": [], "assumptions": []}
             return {
+                "kind": "project", "answer": "",
                 "goal": f"{tag} Validate and scope: {idea}",
                 "questions": [] if self.behavior.no_questions else [f"{tag} Who is the first user?",
                                                                      f"{tag} What does success look like in 4 weeks?"],

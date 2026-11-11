@@ -92,13 +92,19 @@ def plan_messages(goal: str, max_tasks: int, language: str | None = None) -> lis
 
 def clarify_messages(idea: str, language: str | None = None) -> list[dict[str, str]]:
     system = (
-        "You are the Chief Orchestrator of MuseOS. Before any work is dispatched, check that the goal is clear. "
+        "You are the Chief Orchestrator of MuseOS. Before any work is dispatched, decide what kind of request "
+        "this is. kind = 'project': an idea, plan or problem that deserves a team's analysis. kind = 'question': "
+        "one direct answer settles it; put the complete answer in answer. kind = 'action': it asks you to do "
+        "something on a computer or in the world (open, send, buy, change, install). You cannot perform actions: "
+        "say so plainly in answer, then give the exact steps or command the owner can run themselves. "
+        "For 'project' leave answer empty and check that the goal is clear. "
         "Restate the owner's idea as one concrete goal sentence. Then ask only the questions whose answers would "
         "change what the team does: at most 3, each short and answerable in one line. If the idea is already "
         "clear enough to act on, return an empty questions list. List the assumptions you will work under if "
         "the owner does not answer (at most 3). "
         f"{SAFETY_RULES} {language_rule(language)}\n"
-        'JSON schema: {"goal": "string", "questions": ["string"], "assumptions": ["string"]}'
+        'JSON schema: {"kind": "project|question|action", "answer": "string", "goal": "string", '
+        '"questions": ["string"], "assumptions": ["string"]}'
     )
     return [{"role": "system", "content": system}, {"role": "user", "content": wrap_untrusted(idea, "goal")}]
 

@@ -4,7 +4,8 @@
 
 ```
 idea
- └─ clarify (optional)   Chief restates the goal and asks up to 3 questions; the run waits for answers
+ └─ clarify (optional)   Chief classifies the request. A simple question or an action request is answered
+ │                       directly and the run ends. A project: Chief restates the goal and asks up to 3 questions
      └─ plan             Chief returns a task graph (validated: no cycles, known roles)
          └─ execute      tasks with no unmet dependencies run in parallel, each on a routed provider
              └─ review   (optional) each result is challenged once by a different provider
@@ -28,6 +29,7 @@ A blind test adds one more call beside the run: a single model answers the same 
 | `orchestrator.py` | Run lifecycle (LangGraph): clarify, answer, plan, execute, review, synthesize, baseline |
 | `blindtest.py` | Same-shape, name-scrubbed view of both answers; vote tally |
 | `i18n.py` | Output-language rule for prompts; system notes in English, French, Chinese |
+| `admin.py`, `web/admin.html` | Read-only usage, cost, health and settings; no secrets |
 | `setup.py` | `museos setup`: add a provider, store its key in `.env` |
 | `store.py` | SQLAlchemy models and persistence (SQLite by default, PostgreSQL optional) |
 | `api.py`, `cli.py`, `web/index.html` | HTTP API, command line, and the Command Center page |

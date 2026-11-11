@@ -24,6 +24,7 @@ from museos.contracts import (AgentResult, BriefAnswer, ClarifyOutput, Deliverab
                               RunStatus, TaskSpec, TaskStatus)
 from museos.engine import RunContext, call_model, execute_task
 from museos.gateway.registry import ProviderRegistry
+from museos.i18n import note
 from museos.policy import Budget, PolicyConfig, PolicyEngine
 from museos.router import ModelRouter
 from museos.scheduler import DAGScheduler
@@ -164,6 +165,7 @@ class Orchestrator:
         await self.store.update_run(run_id, status=RunStatus.clarifying.value)
         route = ctx.router.route(["planning"], count_load=False)
         value: ClarifyOutput | None = None
+        answered_by: str | None = None
         if route is not None:
             outcome = await call_model(
                 ctx, actor="chief", task_key="__clarify__", route=route, messages=clarify_messages(request.idea, request.language),
@@ -171,6 +173,7 @@ class Orchestrator:
                 max_tokens=2000, timeout_s=90, max_retries=1, max_fallbacks=1,
                 max_cost_usd=min(0.25, request.budget_usd), metadata={"purpose": "clarify", "idea": request.idea})
             value = outcome.value
+            answered_by = outcome.provider
         await self.store.update_run(run_id, spent_usd=ctx.budget.spent_usd)
         if ctx.cancelled:
             await self.store.update_run(run_id, status=RunStatus.cancelled.value)
@@ -178,6 +181,22 @@ class Orchestrator:
         if value is None:  # never block a run on a failed clarification
             await ctx.emit("run.clarification.skipped", {"reason": "clarify call failed"})
             self._launch(run_id, request, request.idea)
+            return
+        if value.kind != "project" and value.answer.strip():
+            # A small question or an action request: answer now instead of spending a team on it.
+            limits = [note(request.language, "direct_answer", provider=answered_by)]
+            if value.kind == "action":
+                limits.insert(0, note(request.language, "cannot_act"))
+            d = Deliverable(run_id=run_id, goal=request.idea, status=RunStatus.completed,
+                            executive_summary=value.answer.strip(), synthesis_source="direct", sections=[],
+                            limitations=limits, providers_used=[answered_by] if answered_by else [],
+                            usage_total=outcome.usage, language=request.language)
+            await self.store.update_run(run_id, status=RunStatus.completed.value,
+                                        deliverable=d.model_dump(mode="json"))
+            cmp = await self.store.get_comparison_by_run(run_id)
+            if cmp:  # nothing to compare: there was no multi-model answer
+                await self.store.delete_comparison(cmp.id)
+            await ctx.emit("run.answered_directly", {"kind": value.kind, "provider": answered_by})
             return
         if not value.questions:
             await ctx.emit("run.clarification.not_needed", {"goal": value.goal})

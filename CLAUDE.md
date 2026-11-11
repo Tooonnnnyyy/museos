@@ -36,6 +36,8 @@ API keys, any OpenAI-compatible endpoint, or a subscription through a command-li
   `web/index.html`; server: `i18n.py`). Model output language comes from `RunRequest.language`.
 - The page follows a fixed visual system: flat color bands, 2px ink rules, square corners, pill buttons with
   solid offset shadows, Manrope and DM Mono. No gradients, rounded cards or soft shadows.
+- The Command Center (`/`) and the admin page (`/admin`) both stay. Admin is read-only and never returns a
+  secret, a connection string or a key value.
 - A blind test must stay blind: no provider names, per-agent sections or progress before the vote.
 - Run one `pytest` process at a time.
 

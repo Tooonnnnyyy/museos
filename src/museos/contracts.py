@@ -219,6 +219,9 @@ class RunRequest(BaseModel):
 class ClarifyOutput(BaseModel):
     """Chief's reading of the idea before any work is dispatched."""
 
+    # project: worth a team. question: one direct answer settles it. action: asks MuseOS to do something.
+    kind: Literal["project", "question", "action"] = "project"
+    answer: str = ""  # filled for question and action; the run then ends without dispatching a team
     goal: str = Field(min_length=1, max_length=2000)
     questions: list[str] = Field(default_factory=list)
     assumptions: list[str] = Field(default_factory=list)
@@ -272,7 +275,7 @@ class Deliverable(BaseModel):
     goal: str
     status: RunStatus
     executive_summary: str
-    synthesis_source: Literal["synthesis_llm", "deterministic"]
+    synthesis_source: Literal["synthesis_llm", "deterministic", "direct"]
     sections: list[DeliverableSection]
     agreements: list[str] = Field(default_factory=list)
     disagreements: list[str] = Field(default_factory=list)
