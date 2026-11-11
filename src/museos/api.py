@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Query, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -46,6 +46,21 @@ def create_app(settings: Settings | None = None, registry: ProviderRegistry | No
 
     app = FastAPI(title="MuseOS Core Engine", version="0.1.0", lifespan=lifespan)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+
+    @app.middleware("http")
+    async def same_origin_writes(request, call_next):
+        """Refuse state-changing requests sent by another website (CSRF). Browsers attach an Origin header
+        to cross-site POSTs; it must name one of the allowed hosts. Non-browser clients send none."""
+        if request.method not in ("GET", "HEAD", "OPTIONS"):
+            origin = request.headers.get("origin")
+            if origin is not None:
+                from urllib.parse import urlsplit
+
+                host = urlsplit(origin).hostname or ""
+                allowed = {h.strip("[]") for h in settings.allowed_hosts}
+                if host not in allowed:
+                    return JSONResponse({"detail": "cross-site request refused"}, status_code=403)
+        return await call_next(request)
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     async def command_center() -> str:

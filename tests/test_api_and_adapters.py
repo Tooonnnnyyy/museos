@@ -336,3 +336,14 @@ def test_admin_summary_counts_and_hides_secrets(client):
     assert client.get("/admin").status_code == 200
     assert client.post("/admin/providers/alpha/reset").json()["healthy"] is True
     assert client.post("/admin/providers/nope/reset").status_code == 404
+
+
+def test_cross_site_writes_are_refused(client):
+    evil = {"origin": "https://evil.example"}
+    assert client.post("/admin/providers/alpha/reset", headers=evil).status_code == 403
+    assert client.post("/runs", json={"idea": "from another site"}, headers=evil).status_code == 403
+    rid = client.post("/runs?wait=true", json={"idea": "Same origin ok", "max_tasks": 2},
+                      headers={"origin": "http://testserver"}).json()["run_id"]
+    assert client.post(f"/runs/{rid}/cancel", headers=evil).status_code == 403
+    assert client.post(f"/runs/{rid}/cancel", headers={"origin": "null"}).status_code == 403
+    assert client.get("/runs", headers=evil).status_code == 200  # reads are not blocked here
