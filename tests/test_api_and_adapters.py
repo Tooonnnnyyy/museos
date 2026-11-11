@@ -346,4 +346,9 @@ def test_cross_site_writes_are_refused(client):
                       headers={"origin": "http://testserver"}).json()["run_id"]
     assert client.post(f"/runs/{rid}/cancel", headers=evil).status_code == 403
     assert client.post(f"/runs/{rid}/cancel", headers={"origin": "null"}).status_code == 403
+    assert client.post(f"/runs/{rid}/cancel", headers={"origin": "http://testserver:3000"}).status_code == 403  # other port
+    assert client.post(f"/runs/{rid}/cancel", headers={"origin": "https://testserver"}).status_code == 403  # other scheme
+    assert client.post(f"/runs/{rid}/cancel", headers={"sec-fetch-site": "cross-site"}).status_code == 403
+    assert client.post(f"/runs/{rid}/cancel", headers={"origin": "http://testserver",
+                                                       "sec-fetch-site": "same-origin"}).status_code == 200
     assert client.get("/runs", headers=evil).status_code == 200  # reads are not blocked here

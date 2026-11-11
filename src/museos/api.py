@@ -49,17 +49,16 @@ def create_app(settings: Settings | None = None, registry: ProviderRegistry | No
 
     @app.middleware("http")
     async def same_origin_writes(request, call_next):
-        """Refuse state-changing requests sent by another website (CSRF). Browsers attach an Origin header
-        to cross-site POSTs; it must name one of the allowed hosts. Non-browser clients send none."""
+        """Refuse state-changing requests sent by any other origin (CSRF), including another port on this
+        machine. Browsers attach an Origin header to cross-origin POSTs; it must equal this server's own
+        scheme, host and port. Non-browser clients send no Origin."""
         if request.method not in ("GET", "HEAD", "OPTIONS"):
             origin = request.headers.get("origin")
-            if origin is not None:
-                from urllib.parse import urlsplit
-
-                host = urlsplit(origin).hostname or ""
-                allowed = {h.strip("[]") for h in settings.allowed_hosts}
-                if host not in allowed:
-                    return JSONResponse({"detail": "cross-site request refused"}, status_code=403)
+            own = f"{request.url.scheme}://{request.headers.get('host', '')}"
+            fetch_site = request.headers.get("sec-fetch-site")
+            if (origin is not None and origin.rstrip("/").lower() != own.lower()) or \
+                    (fetch_site is not None and fetch_site not in ("same-origin", "none")):
+                return JSONResponse({"detail": "cross-origin request refused"}, status_code=403)
         return await call_next(request)
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
