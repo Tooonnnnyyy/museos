@@ -7,9 +7,9 @@ import stat
 
 import pytest
 
-from museos.contracts import RunRequest, RunStatus
-from museos.gateway.base import CompletionRequest, ProviderConfig, ProviderError
-from museos.gateway.claude_cli import ClaudeCLIAdapter
+from swarmos.contracts import RunRequest, RunStatus
+from swarmos.gateway.base import CompletionRequest, ProviderConfig, ProviderError
+from swarmos.gateway.claude_cli import ClaudeCLIAdapter
 from tests.conftest import mock_cfg
 
 FAKE = r'''#!/usr/bin/env python3
@@ -58,7 +58,7 @@ async def test_cli_call_is_toolless_and_strips_secrets(fake_claude, tmp_path):
     assert argv[argv.index("--system-prompt") + 1] == "SYS"
     assert seen["prompt"] == "USER PROMPT" and "USER PROMPT" not in argv  # prompt via stdin
     assert "ANTHROPIC_API_KEY" not in seen["env"] and "DEEPSEEK_API_KEY" not in seen["env"]
-    assert "museos-claude-" in seen["cwd"]  # empty temp dir, no project files or CLAUDE.md
+    assert "swarmos-claude-" in seen["cwd"]  # empty temp dir, no project files or CLAUDE.md
     assert resp.text == '{"summary": "ok"}' and resp.cost_usd == 0.0
     assert resp.model == "claude-sonnet-x" and resp.input_tokens == 15 and resp.output_tokens == 7
 
@@ -132,7 +132,7 @@ async def test_adapter_crash_is_recorded_and_falls_back(make_orch, store, monkey
 
 
 async def test_provider_concurrency_limit_is_shared_across_runs(make_orch):
-    from museos.gateway.mock import MockProvider
+    from swarmos.gateway.mock import MockProvider
     cfg = mock_cfg("solo", latency_s=0.15)
     cfg.max_concurrency = 1
     orch = make_orch([cfg])

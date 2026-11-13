@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import asyncio
 
-from museos.contracts import CollaborationMode, RunRequest, RunStatus, TaskStatus
-from museos.gateway.mock import MockProvider
+from swarmos.contracts import CollaborationMode, RunRequest, RunStatus, TaskStatus
+from swarmos.gateway.mock import MockProvider
 from tests.conftest import mock_cfg
 
 IDEA = "AI-powered pet social network with digital twins"

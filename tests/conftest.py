@@ -4,14 +4,14 @@ import os
 
 import pytest
 
-from museos.config import Settings
-from museos.gateway.base import ProviderConfig
-from museos.gateway.mock import MockProvider
-from museos.gateway.registry import ProviderRegistry
-from museos.orchestrator import Orchestrator
-from museos.store import Store
+from swarmos.config import Settings
+from swarmos.gateway.base import ProviderConfig
+from swarmos.gateway.mock import MockProvider
+from swarmos.gateway.registry import ProviderRegistry
+from swarmos.orchestrator import Orchestrator
+from swarmos.store import Store
 
-# SQLite is used only for tests (documented in README). Set MUSEOS_TEST_DATABASE_URL
+# SQLite is used only for tests (documented in README). Set SWARMOS_TEST_DATABASE_URL
 # to run test_postgres.py against a real PostgreSQL database.
 
 
@@ -50,7 +50,7 @@ def make_orch(store):
 
 @pytest.fixture
 def pg_url():
-    url = os.environ.get("MUSEOS_TEST_DATABASE_URL")
+    url = os.environ.get("SWARMOS_TEST_DATABASE_URL")
     if not url:
-        pytest.skip("MUSEOS_TEST_DATABASE_URL not set")
+        pytest.skip("SWARMOS_TEST_DATABASE_URL not set")
     return url

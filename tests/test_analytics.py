@@ -6,9 +6,9 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from museos.analytics import summary
-from museos.receipt import build_receipt, receipt_markdown
-from museos.store import (AgentRunRow, ComparisonRow, EventRow, PolicyDecisionRow, RunRow, TaskRow, UsageRow)
+from swarmos.analytics import summary
+from swarmos.receipt import build_receipt, receipt_markdown
+from swarmos.store import (AgentRunRow, ComparisonRow, EventRow, PolicyDecisionRow, RunRow, TaskRow, UsageRow)
 
 
 def _t(days_ago: int) -> datetime:
@@ -51,7 +51,7 @@ async def seeded(store):
     for et in ("run.plan.completed", "review.completed", "synthesis.completed"):
         await store.add(EventRow(seq=1, event_type=et, workspace_id="w", project_id="p", run_id="a" * 32,
                                  correlation_id="a" * 32, payload={}, occurred_at=_t(1)))
-    await store.add(ComparisonRow(run_id="a" * 32, museos_slot="A", baseline_status="completed",
+    await store.add(ComparisonRow(run_id="a" * 32, swarmos_slot="A", baseline_status="completed",
                                   choice="A", baseline_cost_usd=0.02, created_at=_t(1)))
     yield store
 

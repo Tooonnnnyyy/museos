@@ -5,12 +5,12 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from museos.chief import parse_plan
-from museos.contracts import Plan, TaskSpec
-from museos.gateway.registry import ProviderRegistry
-from museos.policy import Budget, Decision, PolicyConfig, PolicyEngine, PolicyInput
-from museos.prompts import extract_json, wrap_untrusted
-from museos.router import ModelRouter
+from swarmos.chief import parse_plan
+from swarmos.contracts import Plan, TaskSpec
+from swarmos.gateway.registry import ProviderRegistry
+from swarmos.policy import Budget, Decision, PolicyConfig, PolicyEngine, PolicyInput
+from swarmos.prompts import extract_json, wrap_untrusted
+from swarmos.router import ModelRouter
 from tests.conftest import mock_cfg
 
 
@@ -135,7 +135,7 @@ def test_router_skips_unhealthy_provider():
 
 
 def test_load_dotenv_does_not_override_and_skips_blanks(tmp_path, monkeypatch):
-    from museos.config import load_dotenv
+    from swarmos.config import load_dotenv
 
     p = tmp_path / ".env"
     p.write_text('# c\nA_KEY="quoted"\nexport B_KEY=plain\nEMPTY_KEY=\nKEEP_KEY=fromfile\n')

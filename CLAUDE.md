@@ -1,4 +1,4 @@
-# MuseOS — context for coding agents
+# SwarmAgentOS — context for coding agents
 
 Read this first. Keep it current: when a decision or constraint changes, update this file in the same change.
 
@@ -28,7 +28,7 @@ API keys, any OpenAI-compatible endpoint, or a subscription through a command-li
 - Do not ship model IDs or prices that were not checked in the provider's own docs. Users type model IDs.
 - Subscription providers (`claude_cli`, `command`) are personal, local and low-volume: `max_concurrency = 1`
   and the call caps stay. Read ADR-005 before touching them. Never present them as a way to serve others.
-- Agents have no tools and MuseOS performs no external writes. Any future one must pass
+- Agents have no tools and SwarmAgentOS performs no external writes. Any future one must pass
   `policy.PolicyEngine` and the kill switch.
 - Do not claim something works unless it was run. Mocks in tests; live calls only with a small budget.
 - Reasoning models spend output tokens on thinking: keep `max_output_tokens` at 4000 or more.
@@ -45,9 +45,9 @@ API keys, any OpenAI-compatible endpoint, or a subscription through a command-li
 
 ```bash
 uv sync
-uv run museos setup        # connect a model
-uv run museos providers    # what is configured
-uv run museos serve        # web page at http://127.0.0.1:8000
-uv run museos run "idea" --clarify --cross-review --budget 0.10
+uv run swarmos setup        # connect a model
+uv run swarmos providers    # what is configured
+uv run swarmos serve        # web page at http://127.0.0.1:8000
+uv run swarmos run "idea" --clarify --cross-review --budget 0.10
 uv run pytest -q
 ```

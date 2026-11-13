@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · SwarmAgentOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#11120f;--page:#fff;--paper:#f3efe3;--bone:#fffdf7;
+  --lime:#d9ff43;--flame:#ff5a36;--violet:#b7a7ff;--mint:#75ded1;
+  --soft:color-mix(in srgb,var(--ink) 60%,transparent);
+  --font-text:"Manrope","PingFang SC","Hiragino Sans GB",system-ui,sans-serif;
+  --font-label:"DM Mono","PingFang SC",ui-monospace,monospace;
+  --rule:2px solid var(--ink);--hair:1px solid color-mix(in srgb,var(--ink) 18%,transparent);color-scheme:light}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--paper);color:var(--ink);
+  font:400 1rem/1.5 var(--font-text);padding:24px}
+h1,h2{margin:0;font-weight:600}
+.card{width:min(100%,440px);background:var(--bone);border:var(--rule);box-shadow:8px 8px 0 var(--ink);padding:32px}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.mark{width:38px;height:38px;display:grid;place-items:center;background:var(--lime);border:var(--rule);transform:rotate(-4deg);font:500 1.05rem/1 var(--font-label)}
+.brand b{font-size:1.2rem;letter-spacing:-.02em}
+.tagline{color:var(--soft);font:400 .8rem/1.6 var(--font-label);margin:0 0 24px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;border:var(--rule);margin-bottom:22px}
+.tabs button{padding:10px;border:0;border-right:var(--rule);background:var(--page);font:400 .8rem/1.5 var(--font-label);cursor:pointer}
+.tabs button:last-child{border-right:0}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--bone)}
+label{display:block;margin-bottom:16px}
+label span{display:block;font:400 .72rem/1.5 var(--font-label);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+input{width:100%;padding:12px 14px;border:var(--rule);border-radius:0;background:var(--page);font:inherit;font-size:.98rem}
+input:focus{outline:3px solid var(--ink);outline-offset:2px}
+.btn{width:100%;padding:13px;border:var(--rule);border-radius:0;background:var(--ink);color:var(--bone);
+  font:400 .82rem/1.5 var(--font-label);cursor:pointer;box-shadow:4px 4px 0 var(--flame);margin-top:4px}
+.btn:disabled{opacity:.5;cursor:default}
+.err{display:none;margin:0 0 16px;padding:10px 12px;border:var(--rule);background:var(--flame);font:400 .78rem/1.5 var(--font-label)}
+.hint{color:var(--soft);font:400 .72rem/1.6 var(--font-label);margin-top:16px}
+.badges{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+.badges i{font-style:normal;padding:3px 10px;border:1px solid var(--ink);border-radius:999px;font:400 .66rem/1.5 var(--font-label);background:var(--page)}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand"><span class="mark">M</span><b>SwarmAgentOS</b></div>
+  <p class="tagline" data-i18n="tagline"></p>
+  <div class="tabs" role="tablist">
+    <button type="button" id="tab-login" aria-pressed="true" data-i18n="signIn"></button>
+    <button type="button" id="tab-signup" aria-pressed="false" data-i18n="createAccount"></button>
+  </div>
+  <p class="err" id="err" role="alert"></p>
+  <form id="form" novalidate>
+    <label><span data-i18n="email"></span><input type="email" name="email" id="email" autocomplete="email" required></label>
+    <label><span data-i18n="password"></span><input type="password" name="password" id="password" minlength="8" autocomplete="current-password" required></label>
+    <button class="btn" type="submit" id="submit"></button>
+  </form>
+  <p class="hint" data-i18n="hint"></p>
+  <div class="badges"><i data-i18n="bLocal"></i><i data-i18n="bEncrypted"></i><i data-i18n="bYours"></i></div>
+</div>
+
+<script>
+"use strict";
+const I18N = {
+  en: { tagline:"One idea in, a swarm at work, one answer out. Your runs stay yours — sign in to see them.",
+        signIn:"Sign in", createAccount:"Create account", email:"Email", password:"Password (8+ chars)",
+        hint:"Local and self-hosted: your account lives in your own database. Passwords are stored as scrypt hashes, never in plain text.",
+        bLocal:"Local-first", bEncrypted:"scrypt hashed", bYours:"Your data" },
+  fr: { tagline:"Une idée en entrée, un essaim au travail, une réponse en sortie. Vos lancements restent à vous — connectez-vous pour les voir.",
+        signIn:"Se connecter", createAccount:"Créer un compte", email:"E-mail", password:"Mot de passe (8+ caractères)",
+        hint:"Local et auto-hébergé : votre compte vit dans votre propre base. Les mots de passe sont hachés (scrypt), jamais en clair.",
+        bLocal:"Local-first", bEncrypted:"hachage scrypt", bYours:"Vos données" },
+  zh: { tagline:"一个念头进，一群蜂忙，一份答案出。你的运行只属于你——登录后查看。",
+        signIn:"登录", createAccount:"注册", email:"邮箱", password:"密码（至少 8 位）",
+        hint:"本地自托管：账号存在你自己的数据库里。密码只存 scrypt 哈希，绝不存明文。",
+        bLocal:"本地优先", bEncrypted:"scrypt 哈希", bYours:"你的数据" },
+};
+let lang = "en";
+const t = k => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
+function applyI18n(){ document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = t(el.dataset.i18n)); }
+applyI18n();
+
+let mode = "login";
+function setMode(m, label){ mode = m;
+  document.getElementById("tab-login").setAttribute("aria-pressed", m === "login");
+  document.getElementById("tab-signup").setAttribute("aria-pressed", m === "signup");
+  document.getElementById("password").setAttribute("autocomplete", m === "signup" ? "new-password" : "current-password");
+  document.getElementById("submit").textContent = label;
+}
+setMode("login", t("signIn"));
+document.getElementById("tab-login").addEventListener("click", () => setMode("login", t("signIn")));
+document.getElementById("tab-signup").addEventListener("click", () => setMode("signup", t("createAccount")));
+
+function showErr(msg){ const e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; }
+function hideErr(){ document.getElementById("err").style.display = "none"; }
+
+document.getElementById("form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  hideErr();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const submit = document.getElementById("submit");
+  submit.disabled = true;
+  try {
+    const res = await fetch(mode === "signup" ? "/auth/signup" : "/auth/login", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email, password}),
+    });
+    if (!res.ok) {
+      let msg = res.status + " " + res.statusText;
+      try { const d = await res.json(); msg = d.detail || msg; } catch {}
+      if (res.status === 401 && mode === "login") msg = t("badLogin");
+      if (res.status === 409) msg = t("emailTaken");
+      showErr(typeof msg === "string" ? msg : JSON.stringify(msg));
+      submit.disabled = false;
+      return;
+    }
+    const next = new URLSearchParams(location.search).get("next");
+    location.href = next && next.startsWith("/") ? next : "/";
+  } catch {
+    showErr("network error");
+    submit.disabled = false;
+  }
+});
+
+/* keep a bad-login message per language */
+I18N.en.badLogin = "Wrong email or password."; I18N.en.emailTaken = "This email already has an account — sign in instead.";
+I18N.fr.badLogin = "E-mail ou mot de passe incorrect."; I18N.fr.emailTaken = "Un compte existe déjà pour cet e-mail — connectez-vous.";
+I18N.zh.badLogin = "邮箱或密码错误。"; I18N.zh.emailTaken = "该邮箱已注册，请直接登录。";
+</script>
+</body>
+</html>

@@ -5,8 +5,8 @@ from __future__ import annotations
 import asyncio
 import time
 
-from museos.contracts import AgentResult, TaskSpec, TaskStatus
-from museos.scheduler import DAGScheduler
+from swarmos.contracts import AgentResult, TaskSpec, TaskStatus
+from swarmos.scheduler import DAGScheduler
 
 
 def spec(tid: str, deps: list[str] | None = None, policy: str = "all") -> TaskSpec:

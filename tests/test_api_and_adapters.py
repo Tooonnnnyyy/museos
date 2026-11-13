@@ -7,14 +7,14 @@ import types
 import pytest
 from fastapi.testclient import TestClient
 
-from museos.api import create_app
-from museos.config import Settings
-from museos.contracts import RunRequest, RunStatus
-from museos.gateway.base import CompletionRequest, ProviderConfig, ProviderError
-from museos.gateway.litellm_adapter import LiteLLMAdapter, _map_error
-from museos.gateway.registry import ProviderRegistry, load_provider_configs
-from museos.orchestrator import Orchestrator
-from museos.store import Store
+from swarmos.api import create_app
+from swarmos.config import Settings
+from swarmos.contracts import RunRequest, RunStatus
+from swarmos.gateway.base import CompletionRequest, ProviderConfig, ProviderError
+from swarmos.gateway.litellm_adapter import LiteLLMAdapter, _map_error
+from swarmos.gateway.registry import ProviderRegistry, load_provider_configs
+from swarmos.orchestrator import Orchestrator
+from swarmos.store import Store
 from tests.conftest import mock_cfg
 
 SECRET = "sk-test-DO-NOT-LEAK-123"
@@ -27,7 +27,7 @@ def client(tmp_path, monkeypatch):
             ProviderConfig(id="real", adapter="litellm", model="provider/model-id", enabled=False,
                            api_key_env="FAKE_PROVIDER_KEY")]
     settings = Settings(database_url=f"sqlite+aiosqlite:///{tmp_path / 'api.db'}", retry_backoff_s=0,
-                        allowed_hosts=["testserver"], max_budget_usd=2.0)
+                        allowed_hosts=["testserver"], max_budget_usd=2.0, auth_enabled=False)
     with TestClient(create_app(settings, ProviderRegistry.from_configs(cfgs))) as c:
         yield c
 
@@ -49,7 +49,7 @@ def test_api_run_lifecycle(client):
 
 def test_command_center_page_and_run_list(client):
     page = client.get("/")
-    assert page.status_code == 200 and "MuseOS Command Center" in page.text
+    assert page.status_code == 200 and "SwarmAgentOS Command Center" in page.text
     r = client.post("/runs?wait=true", json={"idea": "Dashboard data", "max_tasks": 2}).json()
     runs = client.get("/runs").json()
     assert runs[0]["run_id"] == r["run_id"] and runs[0]["status"] == "completed"
@@ -190,7 +190,7 @@ def test_clarify_skip_and_cancel_while_waiting(client):
 
 def test_clear_idea_is_not_blocked(tmp_path):
     cfgs = [mock_cfg("alpha", no_questions=True)]
-    settings = Settings(database_url=f"sqlite+aiosqlite:///{tmp_path / 'c.db'}", retry_backoff_s=0,
+    settings = Settings(database_url=f"sqlite+aiosqlite:///{tmp_path / 'c.db'}", retry_backoff_s=0, auth_enabled=False,
                         allowed_hosts=["testserver"])
     with TestClient(create_app(settings, ProviderRegistry.from_configs(cfgs))) as c:
         r = c.post("/runs?wait=true", json={"idea": "Already clear idea", "max_tasks": 2, "clarify": True}).json()
@@ -218,11 +218,11 @@ def test_blind_test_hides_identity_until_vote(client):
     assert set(view["A"]) == set(view["B"])  # same shape on both sides
     assert client.post(f"/comparisons/{cid}/vote", json={"choice": "C"}).status_code == 422
     voted = client.post(f"/comparisons/{cid}/vote", json={"choice": "A", "note": "clearer"}).json()
-    assert voted["state"] == "voted" and voted["reveal"]["museos_slot"] in ("A", "B")
+    assert voted["state"] == "voted" and voted["reveal"]["swarmos_slot"] in ("A", "B")
     assert voted["reveal"]["baseline"]["provider"] in ("alpha", "beta")
     assert client.post(f"/comparisons/{cid}/vote", json={"choice": "B"}).status_code == 409  # one vote only
     t = client.get("/comparisons").json()["tally"]
-    assert t["voted"] == 1 and t["museos_wins"] + t["baseline_wins"] == 1 and t["verdict"] == "in_progress"
+    assert t["voted"] == 1 and t["swarmos_wins"] + t["baseline_wins"] == 1 and t["verdict"] == "in_progress"
     assert client.get(f"/runs/{rid}").json()["deliverable"] is not None  # visible after the vote
     audit = client.get(f"/runs/{rid}/audit").json()
     assert any(a["task"] == "__baseline__" and a["actor"] == "baseline" for a in audit["agent_runs"])
@@ -231,12 +231,12 @@ def test_blind_test_hides_identity_until_vote(client):
 def test_blind_test_tally_verdicts():
     from types import SimpleNamespace as R
 
-    from museos.blindtest import tally
-    wins = [R(choice="A", museos_slot="A")] * 6 + [R(choice="B", museos_slot="A")] * 3 + [R(choice="tie", museos_slot="B")]
+    from swarmos.blindtest import tally
+    wins = [R(choice="A", swarmos_slot="A")] * 6 + [R(choice="B", swarmos_slot="A")] * 3 + [R(choice="tie", swarmos_slot="B")]
     assert tally(wins)["verdict"] == "keep_multi_agent"
-    losses = [R(choice="A", museos_slot="B")] * 6 + [R(choice="A", museos_slot="A")] * 4
+    losses = [R(choice="A", swarmos_slot="B")] * 6 + [R(choice="A", swarmos_slot="A")] * 4
     assert tally(losses) | {} == tally(losses) and tally(losses)["verdict"] == "simplify"
-    assert tally([R(choice=None, museos_slot="A")])["voted"] == 0
+    assert tally([R(choice=None, swarmos_slot="A")])["voted"] == 0
 
 
 async def test_two_answers_at_once_start_the_run_only_once(make_orch, store):
@@ -254,21 +254,21 @@ async def test_two_answers_at_once_start_the_run_only_once(make_orch, store):
 
 # ---------------------------------------------------------------- languages
 def test_language_rule_and_notes():
-    from museos.i18n import heading, language_rule, note
-    from museos.prompts import baseline_messages, clarify_messages, plan_messages, review_messages
+    from swarmos.i18n import heading, language_rule, note
+    from swarmos.prompts import baseline_messages, clarify_messages, plan_messages, review_messages
     assert "French" in language_rule("fr") and "Simplified Chinese" in language_rule("zh")
     assert "same language as the project goal" in language_rule(None)
     for msgs in (plan_messages("g", 3, "fr"), clarify_messages("g", "fr"), baseline_messages("g", "fr")):
         assert "in French" in msgs[0]["content"]
     assert "Résultat partiel" in note("fr", "partial", n=1, total=2, detail="x=failed")
     assert note(None, "template_plan") == note("en", "template_plan") and heading("zh", "risks") == "风险"
-    from museos.i18n import _HEADINGS, _NOTES
+    from swarmos.i18n import _HEADINGS, _NOTES
     assert all(set(v) == {"en", "fr", "zh"} for v in {**_NOTES, **_HEADINGS}.values())  # no missing translation
 
 
 def test_run_in_french_localizes_system_notes_and_markdown(client):
-    from museos.contracts import Deliverable
-    from museos.synthesis import render_markdown
+    from swarmos.contracts import Deliverable
+    from swarmos.synthesis import render_markdown
     r = client.post("/runs?wait=true", json={"idea": "Outil pour valider une idée", "max_tasks": 2, "language": "fr"})
     d = r.json()["deliverable"]
     assert d["language"] == "fr" and any("fournisseurs simulés" in x.lower() for x in d["limitations"])
@@ -281,7 +281,7 @@ def test_run_in_french_localizes_system_notes_and_markdown(client):
 def test_page_has_the_same_keys_in_all_three_languages(page, minimum):
     import re
     from pathlib import Path
-    html = Path("src/museos/web", page).read_text(encoding="utf-8")
+    html = Path("src/swarmos/web", page).read_text(encoding="utf-8")
     blocks = {}
     for lang, nxt in (("en", "\nfr: {"), ("fr", "\nzh: {"), ("zh", "\n}};")):
         start = html.index(f"\n{lang}: {{")
@@ -293,7 +293,7 @@ def test_page_has_the_same_keys_in_all_three_languages(page, minimum):
 
 # ---------------------------------------------------------------- triage
 def _direct_client(tmp_path, kind):
-    settings = Settings(database_url=f"sqlite+aiosqlite:///{tmp_path / 't.db'}", retry_backoff_s=0,
+    settings = Settings(database_url=f"sqlite+aiosqlite:///{tmp_path / 't.db'}", retry_backoff_s=0, auth_enabled=False,
                         allowed_hosts=["testserver"])
     return TestClient(create_app(settings, ProviderRegistry.from_configs([mock_cfg("alpha", direct_kind=kind)])))
 

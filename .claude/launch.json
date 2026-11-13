@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
   "configurations": [
-    {"name": "museos", "runtimeExecutable": "uv", "runtimeArgs": ["run", "museos", "serve", "--port", "8765"], "port": 8765}
+    {"name": "swarmos", "runtimeExecutable": "uv", "runtimeArgs": ["run", "swarmos", "serve", "--port", "8765"], "port": 8765}
   ]
 }

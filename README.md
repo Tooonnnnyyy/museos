@@ -1,11 +1,11 @@
-# MuseOS
+# SwarmAgentOS
 
 English · [简体中文](README.zh-CN.md) · [Français](README.fr.md)
 
 > One idea in. Several AI models at work. One merged answer out.
 
 You have an idea and several AI models you could ask. Today that means pasting the same thing into each
-app, reading every long answer, and merging them yourself. MuseOS does that loop for you, on your own
+app, reading every long answer, and merging them yourself. SwarmAgentOS does that loop for you, on your own
 machine, with **your own models**:
 
 1. **Chief checks the goal.** It restates your idea and asks up to three questions if it is vague.
@@ -30,16 +30,16 @@ uv sync
 ```
 
 ```bash
-uv run museos serve
+uv run swarmos serve
 ```
 
-Open http://127.0.0.1:8000 . Without any configuration MuseOS runs in **demo mode** with built-in mock
+Open http://127.0.0.1:8000 . Without any configuration SwarmAgentOS runs in **demo mode** with built-in mock
 models, so you can click through everything; the answers are placeholder text.
 
 ## Connect your own models
 
 ```bash
-uv run museos setup
+uv run swarmos setup
 ```
 
 Run it once per model. It asks which kind, reads the key with hidden input, checks it where the provider
@@ -59,14 +59,14 @@ prints the link). An app subscription such as ChatGPT Plus is not an API key.
 Check what is configured:
 
 ```bash
-uv run museos providers
+uv run swarmos providers
 ```
 
 Prefer a file? Copy `providers.example.toml` to `providers.toml`; it documents every field.
 
 ### About subscriptions
 
-A personal subscription is meant for your own use. MuseOS runs the vendor's own tool under your login, never
+A personal subscription is meant for your own use. SwarmAgentOS runs the vendor's own tool under your login, never
 reads or stores that login, sends one call at a time, and caps calls per run and per day (editable in
 `providers.toml`). Do not put a subscription behind a service that other people use; use an API key for
 that. You are responsible for the provider's terms. Details:
@@ -93,7 +93,7 @@ and the multi-model route passes with six wins.
 
 **Small requests skip the team.** With "Ask me first" on, Chief first decides what kind of request it is. A
 simple question gets one direct answer. A request to *do* something (open, send, install) gets a plain
-"MuseOS cannot perform actions" plus the steps you can run yourself. Only real project ideas go to the team.
+"SwarmAgentOS cannot perform actions" plus the steps you can run yourself. Only real project ideas go to the team.
 
 **Admin page.** http://127.0.0.1:8000/admin shows usage, cost and failures per model, the last 14 days of
 spend, and current settings. It is read-only, apart from retrying a model that was paused after repeated
@@ -105,7 +105,7 @@ whatever language the idea is written in. Finished runs keep their language.
 **Command line:**
 
 ```bash
-uv run museos run "your idea" --clarify --cross-review --lang en --budget 0.5 --out artifacts/idea.md
+uv run swarmos run "your idea" --clarify --cross-review --lang en --budget 0.5 --out artifacts/idea.md
 ```
 
 ## Cost and limits
@@ -113,21 +113,23 @@ uv run museos run "your idea" --clarify --cross-review --lang en --budget 0.5 --
 - You pay your providers directly. A run with cross-review is typically 8 to 12 model calls; with small
   models that is a few cents. Each task shows its tokens and cost.
 - Every run has a budget ceiling (`--budget`, default $2 from the command line, $0.50 on the page) checked
-  before each call, plus a server-side maximum (`MUSEOS_MAX_BUDGET_USD`, default $2).
+  before each call, plus a server-side maximum (`SWARMOS_MAX_BUDGET_USD`, default $2).
 - Subscription providers are limited to one call at a time, 6 per run and 40 per day by default.
-- MuseOS is local and single-user: no login, answers only on `localhost`. See [SECURITY.md](SECURITY.md).
+- SwarmAgentOS is local and single-user: no login, answers only on `localhost`. See [SECURITY.md](SECURITY.md).
 - More in [Known limitations](docs/ARCHITECTURE.md#known-limitations).
 
 ## Configuration
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `MUSEOS_DATABASE_URL` | SQLite file `museos.db` in the current folder | For PostgreSQL: `uv sync --extra postgres` and a `postgresql+asyncpg://…` URL |
-| `MUSEOS_PROVIDERS_FILE` | `./providers.toml` if present, else demo models | Path to your provider file |
-| `MUSEOS_MAX_BUDGET_USD` | `2.0` | Highest budget any run may request |
-| `MUSEOS_ALLOWED_HOSTS` | `localhost,127.0.0.1,[::1]` | Host names the server answers to |
+| `SWARMOS_DATABASE_URL` | SQLite file `swarmos.db` in the current folder | For PostgreSQL: `uv sync --extra postgres` and a `postgresql+asyncpg://…` URL |
+| `SWARMOS_PROVIDERS_FILE` | `./providers.toml` if present, else demo models | Path to your provider file |
+| `SWARMOS_MAX_BUDGET_USD` | `2.0` | Highest budget any run may request |
+| `SWARMOS_ALLOWED_HOSTS` | `localhost,127.0.0.1,[::1]` | Host names the server answers to |
+| `SWARMOS_AUTH_ENABLED` | `true` | Require signup/login (session cookie). `false` restores anonymous single-user mode |
+| `SWARMOS_SESSION_TTL_DAYS` | `30` | How long a login session stays valid |
 
-Run options (`museos run` flags and `POST /runs` fields):
+Run options (`swarmos run` flags and `POST /runs` fields):
 
 | Flag / field | Default | Meaning |
 |---|---|---|
@@ -155,7 +157,12 @@ Run options (`museos run` flags and `POST /runs` fields):
 | `POST /admin/providers/{id}/reset` | Retry a model paused by the circuit breaker |
 | `GET /analytics`, `GET /analytics/summary?days=7\|28\|90\|365` | GA4-style dashboard and its numbers: runs, spend, calls, latency, provider breakdown, run funnel, council score |
 | `GET /runs/{id}/receipt`, `GET /runs/{id}/receipt.md` | Decision Receipt for one run — who spoke, what it cost, policy decisions, failures (JSON or Markdown) |
-| `GET /providers`, `GET /health` | Configured models (no secrets); liveness |
+| `GET /providers`, `GET /health` | Configured models (no secrets); liveness (`/health` is public) |
+| `GET /login`, `POST /auth/signup` | Sign-up page; create an account (sets the session cookie) |
+| `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` | Sign in, sign out, current account |
+
+When auth is on (default), every other endpoint requires a session and returns 401 otherwise, and each
+account only sees its own runs, receipts and analytics.
 
 The **Analytics** page (`/analytics`) renders every number from your own ledger tables within a date
 window — nothing is hardcoded, so a fresh install shows an empty state and every user sees only their own
@@ -175,8 +182,8 @@ Tests use mock models and a temporary SQLite file; none calls a real provider. H
 
 ## Licence
 
-MuseOS is free software under the [GNU AGPL v3 or later](LICENSE): you may use, modify and share it, and if
+SwarmAgentOS is free software under the [GNU AGPL v3 or later](LICENSE): you may use, modify and share it, and if
 you run a modified version as a network service you must publish your changes under the same licence.
 
-If you want to use MuseOS in a product or service without those obligations, a commercial licence is
+If you want to use SwarmAgentOS in a product or service without those obligations, a commercial licence is
 available: open an issue titled "Commercial licence".

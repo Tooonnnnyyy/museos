@@ -1,8 +1,8 @@
 [project]
-name = "museos"
+name = "swarmos"
 version = "0.1.0"
 description = "One idea in, several AI models at work, one merged answer out. Bring your own model keys."
-authors = [{ name = "MuseOS authors" }]
+authors = [{ name = "SwarmAgentOS authors" }]
 license = "AGPL-3.0-or-later"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -23,7 +23,7 @@ postgres = [
 ]
 
 [project.scripts]
-museos = "museos.cli:main"
+swarmos = "swarmos.cli:main"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

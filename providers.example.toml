@@ -1,15 +1,15 @@
-# MuseOS providers. The easy way to create your own file is:  museos setup
+# SwarmAgentOS providers. The easy way to create your own file is:  swarmos setup
 # This example shows every kind of provider. Copy it to providers.toml and edit, or let setup write it.
 #
 # Rules:
 #   * Never put a key here. `api_key_env` names the environment variable (in .env) that holds it.
 #   * `model` for adapter "litellm" uses LiteLLM's "<provider>/<model-id>" form.
 #     Model IDs change often: copy the current one from the provider's own models page.
-#   * Prices are optional. If you leave them out, MuseOS uses LiteLLM's price table when it knows the model,
+#   * Prices are optional. If you leave them out, SwarmAgentOS uses LiteLLM's price table when it knows the model,
 #     and otherwise reserves each task's cost ceiling.
 #   * An app subscription (ChatGPT Plus, Claude Pro, Gemini app...) is not an API key. To use a subscription,
 #     see the two subscription examples at the end.
-#   * MuseOS works best with two or more different models, so they can review each other.
+#   * SwarmAgentOS works best with two or more different models, so they can review each other.
 
 # --- API key providers ---------------------------------------------------------------
 [[providers]]

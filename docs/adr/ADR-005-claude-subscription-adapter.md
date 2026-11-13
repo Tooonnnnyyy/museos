@@ -20,10 +20,10 @@ user's own login, for that user's own runs on their own machine.
 
 Guardrails, all enforced in code:
 
-1. No credential handling. MuseOS never reads the keychain or any token. `--bare` is not used because it
+1. No credential handling. SwarmAgentOS never reads the keychain or any token. `--bare` is not used because it
    bypasses the subscription login.
 2. Text only. `--tools ""`, `--strict-mcp-config`, `--disable-slash-commands`, `--setting-sources ""`,
-   `--no-session-persistence`, run from an empty temp directory. The MuseOS policy engine stays the only gate.
+   `--no-session-persistence`, run from an empty temp directory. The SwarmAgentOS policy engine stays the only gate.
 3. Secrets stay out. Provider keys and `ANTHROPIC_*` variables are removed from the child's environment, so a
    call cannot silently bill an API key either.
 4. Ordinary volume. `max_concurrency = 1`, `max_calls_per_run`, `max_calls_per_day`; a cap hit is recorded as
@@ -32,7 +32,7 @@ Guardrails, all enforced in code:
 
 ## Consequences
 
-- This provider is single-user. Before MuseOS serves anyone else (hosted API, Telegram bot for other people,
+- This provider is single-user. Before SwarmAgentOS serves anyone else (hosted API, Telegram bot for other people,
   team use), Claude calls must move to an Anthropic API key through the LiteLLM adapter. The switch is a
   `providers.toml` change.
 - Calls share the user's interactive Claude limits and are slower than API calls (one process per call).
@@ -41,6 +41,6 @@ Guardrails, all enforced in code:
   guarantee.
 
 The generic `command` adapter (`gateway/command.py`) applies the same pattern to any other command-line tool
-a user is signed in to. MuseOS does not ship settings for other vendors' CLIs: each user configures the command
-and is responsible for that vendor's terms. `museos setup` shows a notice and requires an explicit
+a user is signed in to. SwarmAgentOS does not ship settings for other vendors' CLIs: each user configures the command
+and is responsible for that vendor's terms. `swarmos setup` shows a notice and requires an explicit
 acknowledgement before adding any subscription-backed provider.

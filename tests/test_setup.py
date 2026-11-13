@@ -1,4 +1,4 @@
-"""`museos setup`, the command adapter, and zero-config defaults."""
+"""`swarmos setup`, the command adapter, and zero-config defaults."""
 
 from __future__ import annotations
 
@@ -6,12 +6,12 @@ import stat
 
 import pytest
 
-from museos.config import Settings
-from museos.contracts import RunRequest, RunStatus
-from museos.gateway.base import CompletionRequest, ProviderConfig, ProviderError
-from museos.gateway.command import CommandAdapter
-from museos.gateway.registry import ProviderRegistry, load_provider_configs
-from museos.setup import PRESETS, append_provider, run_setup, save_secret
+from swarmos.config import Settings
+from swarmos.contracts import RunRequest, RunStatus
+from swarmos.gateway.base import CompletionRequest, ProviderConfig, ProviderError
+from swarmos.gateway.command import CommandAdapter
+from swarmos.gateway.registry import ProviderRegistry, load_provider_configs
+from swarmos.setup import PRESETS, append_provider, run_setup, save_secret
 
 SECRET = "sk-setup-DO-NOT-LEAK-9"
 
@@ -119,19 +119,19 @@ async def test_command_adapter_failure_and_missing_binary(tmp_path):
 # ---------------------------------------------------------------- zero-config defaults
 def test_defaults_need_no_database_server_or_config(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    for k in ("MUSEOS_DATABASE_URL", "MUSEOS_PROVIDERS_FILE"):
+    for k in ("SWARMOS_DATABASE_URL", "SWARMOS_PROVIDERS_FILE"):
         monkeypatch.delenv(k, raising=False)
     s = Settings.from_env()
     assert s.database_url.startswith("sqlite") and s.providers_file is None  # demo models
     (tmp_path / "providers.toml").write_text('[[providers]]\nid = "x"\nadapter = "mock"\nmodel = "m"\n')
     assert Settings.from_env().providers_file == "providers.toml"
-    monkeypatch.setenv("MUSEOS_PROVIDERS_FILE", "")
+    monkeypatch.setenv("SWARMOS_PROVIDERS_FILE", "")
     assert Settings.from_env().providers_file is None  # explicit empty value forces demo models
 
 
 async def test_parallel_run_on_a_fresh_sqlite_file(tmp_path):
-    from museos.orchestrator import Orchestrator
-    from museos.store import Store
+    from swarmos.orchestrator import Orchestrator
+    from swarmos.store import Store
     from tests.conftest import mock_cfg
     store = Store(f"sqlite+aiosqlite:///{tmp_path / 'fresh.db'}")
     await store.init()

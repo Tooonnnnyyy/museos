@@ -1,10 +1,10 @@
-# MuseOS
+# SwarmAgentOS
 
 [English](README.md) · [简体中文](README.zh-CN.md) · Français
 
 > Une idée entre, plusieurs modèles d'IA travaillent en parallèle, un seul résultat coordonné en sort.
 
-MuseOS est un moteur d'orchestration multi-modèles qui tourne sur votre machine, avec **vos propres modèles**.
+SwarmAgentOS est un moteur d'orchestration multi-modèles qui tourne sur votre machine, avec **vos propres modèles**.
 Chief vérifie l'objectif, découpe l'idée en tâches, les confie à différents modèles en parallèle, lance au besoin
 une relecture croisée, puis fusionne une réponse qui liste les accords, les désaccords, les hypothèses, les
 risques et les limites. Un **test à l'aveugle** est intégré : un seul modèle répond de son côté à la même
@@ -27,15 +27,15 @@ uv sync
 ```
 
 ```bash
-uv run museos serve
+uv run swarmos serve
 ```
 
-Ouvrez http://127.0.0.1:8000 . Sans configuration, MuseOS tourne en **mode démo** avec des modèles simulés : les réponses sont du texte factice.
+Ouvrez http://127.0.0.1:8000 . Sans configuration, SwarmAgentOS tourne en **mode démo** avec des modèles simulés : les réponses sont du texte factice.
 
 **Connecter vos propres modèles :**
 
 ```bash
-uv run museos setup
+uv run swarmos setup
 ```
 
 Lancez-le une fois par modèle. Il demande le type, lit la clé en saisie masquée, la vérifie quand le fournisseur le permet, puis écrit `providers.toml` et `.env`. Deux modèles différents ou plus donnent les meilleurs résultats.
@@ -50,7 +50,7 @@ Lancez-le une fois par modèle. Il demande le type, lit la clé en saisie masqu�
 
 Vous saisissez vous-même l'identifiant du modèle, car il change souvent : copiez-le depuis la page des modèles du fournisseur. Un abonnement d'application comme ChatGPT Plus n'est pas une clé API.
 
-**À propos des abonnements :** un abonnement personnel est réservé à votre propre usage. MuseOS lance l'outil du fournisseur, ne lit ni ne conserve votre connexion, envoie un seul appel à la fois et plafonne les appels par exécution et par jour. Ne placez pas un abonnement derrière un service utilisé par d'autres personnes : utilisez une clé API dans ce cas. Le respect des conditions du fournisseur relève de votre responsabilité.
+**À propos des abonnements :** un abonnement personnel est réservé à votre propre usage. SwarmAgentOS lance l'outil du fournisseur, ne lit ni ne conserve votre connexion, envoie un seul appel à la fois et plafonne les appels par exécution et par jour. Ne placez pas un abonnement derrière un service utilisé par d'autres personnes : utilisez une clé API dans ce cas. Le respect des conditions du fournisseur relève de votre responsabilité.
 
 **2. Envoyer une idée.** Écrivez-la en haut de la page et cliquez sur « Lancer ». Trois interrupteurs :
 
@@ -64,9 +64,9 @@ Vous saisissez vous-même l'identifiant du modèle, car il change souvent : copi
 
 **4. Lire le résultat.** Commencez par le résumé, les points d'accord, les désaccords et les prochaines étapes. Les désaccords méritent le plus votre attention. La sortie de chaque agent, les hypothèses, les risques et les limites peuvent être dépliés.
 
-**5. Voter au test à l'aveugle.** Une exécution en test à l'aveugle cache sa progression. Quand les deux côtés ont terminé, la page affiche A et B. Choisissez la plus utile ; c'est seulement après le vote que la page indique laquelle était la synthèse multi-modèles. La bande jaune tient le score : après 10 votes, MuseOS réussit avec 6 victoires. Sinon, il faut simplifier le système : plusieurs réponses, une seule fusion.
+**5. Voter au test à l'aveugle.** Une exécution en test à l'aveugle cache sa progression. Quand les deux côtés ont terminé, la page affiche A et B. Choisissez la plus utile ; c'est seulement après le vote que la page indique laquelle était la synthèse multi-modèles. La bande jaune tient le score : après 10 votes, SwarmAgentOS réussit avec 6 victoires. Sinon, il faut simplifier le système : plusieurs réponses, une seule fusion.
 
-**Les petites demandes ne mobilisent pas l'équipe.** Avec « Me questionner » activé, Chief détermine d'abord le type de demande. Une question simple reçoit une réponse directe. Une demande d'action (ouvrir, envoyer, installer) reçoit un message clair, « MuseOS ne peut effectuer aucune action », avec les étapes à lancer vous-même. Seules les vraies idées de projet vont à l'équipe.
+**Les petites demandes ne mobilisent pas l'équipe.** Avec « Me questionner » activé, Chief détermine d'abord le type de demande. Une question simple reçoit une réponse directe. Une demande d'action (ouvrir, envoyer, installer) reçoit un message clair, « SwarmAgentOS ne peut effectuer aucune action », avec les étapes à lancer vous-même. Seules les vraies idées de projet vont à l'équipe.
 
 **Page d'administration.** http://127.0.0.1:8000/admin affiche l'utilisation, le coût et les échecs par modèle, les dépenses des 14 derniers jours et les réglages. Elle est en lecture seule, sauf pour relancer un modèle mis en pause. Les clés sont seulement indiquées comme présentes ou absentes.
 
@@ -75,7 +75,7 @@ Vous saisissez vous-même l'identifiant du modèle, car il change souvent : copi
 **Ligne de commande** (sans la page web) :
 
 ```bash
-uv run museos run "votre idée" --clarify --cross-review --lang fr --budget 0.5 --out artifacts/idee.md
+uv run swarmos run "votre idée" --clarify --cross-review --lang fr --budget 0.5 --out artifacts/idee.md
 ```
 
 **Coût et limites :**
@@ -86,4 +86,4 @@ uv run museos run "votre idée" --clarify --cross-review --lang fr --budget 0.5 
 
 ## Licence
 
-MuseOS est publié sous [GNU AGPL v3 ou ultérieure](LICENSE). Pour l'utiliser dans un produit ou un service sans ces obligations, une licence commerciale est disponible : ouvrez une issue intitulée « Commercial licence ».
+SwarmAgentOS est publié sous [GNU AGPL v3 ou ultérieure](LICENSE). Pour l'utiliser dans un produit ou un service sans ces obligations, une licence commerciale est disponible : ouvrez une issue intitulée « Commercial licence ».
