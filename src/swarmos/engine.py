@@ -39,6 +39,7 @@ class RunContext:
     store: Store
     cancel_event: asyncio.Event
     retry_backoff_s: float = 0.25
+    tools_enabled: bool = True  # server-level switch for the read-only web tools
     provider_semaphores: dict[str, asyncio.Semaphore] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)  # run-level limitations to surface
     provider_calls: dict[str, int] = field(default_factory=dict)  # attempts reserved this run
@@ -205,6 +206,67 @@ async def _record_attempt(ctx: RunContext, task_key: str, actor: str, provider: 
         status=status, error=error, latency_ms=int((time.perf_counter() - started) * 1000)))
 
 
+async def _enrich_research(ctx: RunContext, task: TaskSpec) -> str | None:
+    """Policy-gated, audited web research for one task: one search, up to 3 fetches.
+
+    Every call goes through the policy engine (``tool.<name>`` with the task's tools_allowed)
+    and is recorded in ``policy_decisions`` and ``tool_runs``. A call consumes a budget step
+    but costs $0. Returns source text for the prompt, or None.
+    """
+    from swarmos import tools as tools_mod
+    from swarmos.store import ToolRunRow
+
+    async def allowed(tool: str, resource: str | None) -> bool:
+        d = ctx.policy.decide(PolicyInput(
+            actor=task.role.value, workspace_id=ctx.request.workspace_id, action=f"tool.{tool}",
+            resource=resource, tools_allowed=task.tools_allowed, risk_level=task.risk_level,
+            steps_remaining=ctx.budget.steps_remaining))
+        await ctx.store.add(PolicyDecisionRow(
+            run_id=ctx.run_id, task_key=task.task_id, actor=task.role.value, action=f"tool.{tool}",
+            resource=resource, decision=d.decision.value, rule=d.rule, reason=d.reason))
+        return d.decision is Decision.ALLOW
+
+    if not await allowed("web_search", None):
+        return None
+    ctx.budget.reserve(0.0)  # free, but still a step
+    started = time.perf_counter()
+    try:
+        hits = await tools_mod.web_search(task.objective, max_results=5)
+        search_status = "completed"
+    except Exception as e:
+        hits, search_status = [], f"failed: {type(e).__name__}"
+    ctx.budget.settle(0.0, 0.0)
+    await ctx.store.add(ToolRunRow(
+        run_id=ctx.run_id, task_key=task.task_id, tool="web_search", status=search_status,
+        detail=f"{len(hits)} hits in {int((time.perf_counter() - started) * 1000)} ms"))
+    await ctx.emit("tool.used", {"tool": "web_search", "status": search_status, "hits": len(hits)},
+                   task_id=task.task_id)
+    if not hits:
+        return None
+
+    sources = [f"[{h['title']}]({h['url']})\n{h.get('snippet', '')}" for h in hits]
+    for h in hits[:3]:
+        if ctx.cancelled:
+            break
+        if not await allowed("web_fetch", h["url"]):
+            continue
+        ctx.budget.reserve(0.0)
+        try:
+            body = await tools_mod.web_fetch(h["url"], max_bytes=20_000)
+            fetch_status = "completed"
+        except Exception as e:
+            body, fetch_status = "", f"failed: {type(e).__name__}"
+        ctx.budget.settle(0.0, 0.0)
+        await ctx.store.add(ToolRunRow(
+            run_id=ctx.run_id, task_key=task.task_id, tool="web_fetch", status=fetch_status,
+            detail=f"{h['url']} ({len(body)} chars)"))
+        await ctx.emit("tool.used", {"tool": "web_fetch", "status": fetch_status, "resource": h["url"]},
+                       task_id=task.task_id)
+        if body:
+            sources.append(f"\n=== {h['title']} ===\n{body[:3000]}")
+    return "\n\n".join(sources)
+
+
 async def execute_task(ctx: RunContext, goal: str, task: TaskSpec, upstream: list[AgentResult]) -> AgentResult:
     from swarmos.contracts import ModelOutput
     from swarmos.i18n import note
@@ -219,9 +281,13 @@ async def execute_task(ctx: RunContext, goal: str, task: TaskSpec, upstream: lis
     await ctx.emit("agent_run.started", {"role": task.role.value, "provider": route.provider_id,
                                          "model": route.model, "reason": route.reason}, task_id=task.task_id)
 
+    sources: str | None = None
+    if task.tools_allowed and ctx.tools_enabled:
+        sources = await _enrich_research(ctx, task)
+
     outcome = await call_model(
         ctx, actor=task.role.value, task_key=task.task_id, route=route,
-        messages=task_messages(goal, task, upstream, ctx.request.language),
+        messages=task_messages(goal, task, upstream, ctx.request.language, sources=sources),
         parse=lambda text: ModelOutput.model_validate(extract_json(text)),
         max_tokens=task.max_output_tokens, timeout_s=task.timeout_s, max_retries=task.max_retries,
         max_fallbacks=task.max_fallbacks, max_cost_usd=task.max_cost_usd,

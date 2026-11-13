@@ -16,8 +16,10 @@ SwarmAgentOS is built to run on your own machine.
   session cookies add `SameSite=Lax` on top.
 - **Keys.** API keys live in `.env` (owner-only, gitignored) and are referenced by environment-variable
   name. They are never written to `providers.toml`, the database, logs, prompts or API responses.
-- **Model output is untrusted.** Agents have no tools and cannot take actions. Text from users and from
-  other agents is delimited in prompts and treated as data.
+- **Web tools are read-only and policy-gated.** With `research: true`, research tasks may search the web
+  (DuckDuckGo) and fetch pages (byte-capped, http/https only). Hosts resolving to private/loopback/
+  link-local/reserved addresses are refused (SSRF guard), every call is a policy decision recorded in
+  the ledger, and fetched content is treated as untrusted prompt data. No external writes exist.
 - **Subscriptions.** Subscription-backed providers run the vendor's own CLI under your own login. SwarmAgentOS
   never reads or stores the login. See `docs/adr/ADR-005-claude-subscription-adapter.md`.
 

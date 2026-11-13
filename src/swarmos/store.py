@@ -164,6 +164,19 @@ class SessionRow(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class ToolRunRow(Base):
+    """One tool call (web_search / web_fetch) made during a run, after a policy decision."""
+
+    __tablename__ = "tool_runs"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    run_id: Mapped[str] = mapped_column(ForeignKey("runs.id", ondelete="CASCADE"), index=True)
+    task_key: Mapped[str] = mapped_column(String(128))
+    tool: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(32))
+    detail: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class Store:
     def __init__(self, database_url: str):
         self.engine: AsyncEngine = create_async_engine(database_url, future=True)
@@ -414,3 +427,8 @@ class Store:
             if row is not None:
                 await s.delete(row)
                 await s.commit()
+
+    async def list_tool_runs(self, run_id: str) -> list[ToolRunRow]:
+        async with self.sessions() as s:
+            return list((await s.execute(select(ToolRunRow).where(ToolRunRow.run_id == run_id)
+                                         .order_by(ToolRunRow.created_at))).scalars())

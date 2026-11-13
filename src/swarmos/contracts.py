@@ -210,6 +210,7 @@ class RunRequest(BaseModel):
     task_timeout_s: float | None = Field(default=None, gt=0, le=900)  # overrides per-task timeout
     language: Literal["en", "fr", "zh"] | None = None  # output language; None = follow the idea
     clarify: bool = False  # Chief asks up to 3 questions before planning
+    research: bool = False  # let research tasks use read-only web tools (search/fetch), policy-gated
     compare: bool = False  # also ask one single model, for a blind A/B vote
     baseline_provider: str | None = None  # single model for the blind test; None = router's pick
     workspace_id: str = "default"

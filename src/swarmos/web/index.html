@@ -197,6 +197,7 @@ button.item:hover .item__t{text-decoration:underline;text-underline-offset:4px}
       <label class="opt"><input type="checkbox" id="clarify" checked><span data-i18n="optClarify"></span></label>
       <label class="opt"><input type="checkbox" id="review" checked><span data-i18n="optReview"></span></label>
       <label class="opt"><input type="checkbox" id="compare"><span data-i18n="optCompare"></span></label>
+      <label class="opt"><input type="checkbox" id="research"><span data-i18n="optResearch"></span></label>
     </div>
     <div class="formrow">
       <label class="mini"><span data-i18n="mode"></span> <select id="mode"><option value="dynamic" data-i18n="modeDynamic"></option><option value="fan_out" data-i18n="modeFanout"></option></select></label>
@@ -244,7 +245,7 @@ en: {
   hero1: "One idea in.", hero2a: "One ", hero2b: "result", hero2c: " out.",
   lede: "Chief first checks what you want, then splits the work across different models in parallel, has them review each other, and merges one answer that shows the disagreements and limits.",
   ideaLabel: "Your idea", ideaPh: "For example: an AI pet social network where owners scan their real pets into digital twins…",
-  optClarify: "Ask me first, then dispatch", optReview: "Cross-review", optCompare: "Blind test: also ask one model",
+  optClarify: "Ask me first, then dispatch", optReview: "Cross-review", optCompare: "Blind test: also ask one model", optResearch: "Research: search the web (read-only)",
   mode: "Assign", modeDynamic: "Chief picks the models", modeFanout: "Every task to every model", baseline: "Single model", auto: "Auto",
   budget: "Budget $", maxTasks: "Max tasks", start: "Start ↗", needIdea: "Write an idea first.", submitFailed: "Could not submit: {0}",
   stripEyebrow: "Blind test · multi-model synthesis vs one model", tallyNone: "No blind tests yet",
@@ -286,7 +287,7 @@ fr: {
   hero1: "Une idée entre.", hero2a: "Un ", hero2b: "résultat", hero2c: " en sort.",
   lede: "Chief vérifie d'abord ce que vous voulez, répartit le travail entre plusieurs modèles en parallèle, les fait se relire, puis fusionne une réponse qui montre les désaccords et les limites.",
   ideaLabel: "Votre idée", ideaPh: "Par exemple : un réseau social pour animaux où l'on scanne son animal pour créer son jumeau numérique…",
-  optClarify: "Me questionner avant de répartir", optReview: "Relecture croisée", optCompare: "Test à l'aveugle : interroger aussi un seul modèle",
+  optClarify: "Me questionner avant de répartir", optReview: "Relecture croisée", optCompare: "Test à l'aveugle : interroger aussi un seul modèle", optResearch: "Recherche : chercher sur le web (lecture seule)",
   mode: "Répartition", modeDynamic: "Chief choisit les modèles", modeFanout: "Chaque tâche à tous les modèles", baseline: "Modèle seul", auto: "Auto",
   budget: "Budget $", maxTasks: "Tâches max", start: "Lancer ↗", needIdea: "Écrivez d'abord une idée.", submitFailed: "Envoi impossible : {0}",
   stripEyebrow: "Test à l'aveugle · synthèse multi-modèles contre un seul modèle", tallyNone: "Aucun test à l'aveugle",
@@ -328,7 +329,7 @@ zh: {
   hero1: "一个想法进来。", hero2a: "一份", hero2b: "结果", hero2c: "出来。",
   lede: "Chief 先确认你想要什么，再把任务分给不同模型并行做，互相审查，最后合成一份带分歧和局限的结论。",
   ideaLabel: "你的想法", ideaPh: "比如：做一个 AI 宠物社交网络，用户扫描真实宠物生成数字分身……",
-  optClarify: "先问清楚再分发", optReview: "交叉审查", optCompare: "盲测：同时问单个模型",
+  optClarify: "先问清楚再分发", optReview: "交叉审查", optCompare: "盲测：同时问单个模型", optResearch: "联网检索：搜索网页（只读）",
   mode: "分配", modeDynamic: "Chief 自动选模型", modeFanout: "每个任务发给所有模型", baseline: "单模型对手", auto: "自动",
   budget: "预算 $", maxTasks: "最多任务", start: "开始 ↗", needIdea: "先写下想法。", submitFailed: "提交失败：{0}",
   stripEyebrow: "盲测 · 多模型合成 对 单个模型", tallyNone: "还没有盲测",
@@ -458,6 +459,7 @@ $("form").onsubmit = async ev => {
   $("go").disabled = true;
   try {
     const r = await post("/runs", {idea, language: lang, clarify: $("clarify").checked, cross_review: $("review").checked, compare: $("compare").checked,
+      research: $("research").checked,
       baseline_provider: $("baseline").value || null, mode: $("mode").value, budget_usd: Number($("budget").value), max_tasks: Number($("maxtasks").value)});
     r.comparison_id ? openCmp(r.comparison_id) : openRun(r.run_id);
     $("now").scrollIntoView(); loadSide();

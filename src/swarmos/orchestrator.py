@@ -146,6 +146,7 @@ class Orchestrator:
             policy=self.policy, budget=Budget(request.budget_usd, request.max_steps), store=self.store,
             cancel_event=self._cancel.setdefault(run_id, asyncio.Event()),
             retry_backoff_s=self.settings.retry_backoff_s,
+            tools_enabled=self.settings.tools_enabled,
         )
         ctx.budget.spent_usd = spent_usd
         if not ctx.router.allowed:

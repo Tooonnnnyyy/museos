@@ -54,7 +54,7 @@ def wrap_untrusted(text: str, tag: str) -> str:
 
 
 def task_messages(goal: str, task: TaskSpec, upstream: list[AgentResult],
-                  language: str | None = None) -> list[dict[str, str]]:
+                  language: str | None = None, sources: str | None = None) -> list[dict[str, str]]:
     system = (
         f"You are the {ROLE_BRIEFS[task.role]}\n"
         f"You are one specialist in a multi-agent team coordinated by a Chief agent. Work only on your objective. "
@@ -71,6 +71,10 @@ def task_messages(goal: str, task: TaskSpec, upstream: list[AgentResult],
         }, ensure_ascii=False)
         parts.append(f"\nUpstream result from {r.agent_role}:")
         parts.append(wrap_untrusted(digest, "upstream_result"))
+    if sources:
+        parts.append("\nVerified web sources gathered for you. Use them; put the URLs in your evidence entries "
+                     "and mark claims you could not verify:")
+        parts.append(wrap_untrusted(sources, "sources"))
     return [{"role": "system", "content": system}, {"role": "user", "content": "\n".join(parts)}]
 
 

@@ -27,7 +27,7 @@ def _aware(dt: datetime) -> str:
 
 def build_receipt(run: RunRow, tasks: list[TaskRow], attempts: list[AgentRunRow], usage: list[UsageRow],
                   decisions: list[PolicyDecisionRow], events: list[EventRow],
-                  comparison: ComparisonRow | None) -> dict[str, Any]:
+                  comparison: ComparisonRow | None, tool_runs: list[Any] | None = None) -> dict[str, Any]:
     request = run.request or {}
     provider_calls: dict[str, dict[str, Any]] = defaultdict(
         lambda: {"calls": 0, "cost_usd": 0.0, "tokens": 0, "errors": 0, "latency_ms": []})
@@ -97,6 +97,8 @@ def build_receipt(run: RunRow, tasks: list[TaskRow], attempts: list[AgentRunRow]
         "policy_decisions": [{"actor": d.actor, "action": d.action, "resource": d.resource,
                               "decision": d.decision, "rule": d.rule, "reason": d.reason}
                              for d in decisions],
+        "tools": [{"task": t.task_key, "tool": t.tool, "status": t.status, "detail": t.detail}
+                  for t in (tool_runs or [])],
         "failures": [{"task": a.task_key, "attempt": a.attempt, "provider": a.provider,
                       "error": a.error} for a in attempts if a.status != "completed"],
         "events": [{"type": e.event_type, "at": _aware(e.occurred_at)} for e in events],
@@ -158,6 +160,11 @@ def receipt_markdown(r: dict[str, Any]) -> str:
                   "|---|---|---|---|---|"]
         for d in r["policy_decisions"]:
             lines.append(f"| {d['actor']} | `{d['action']}` | {d['decision']} | {d['rule']} | {d['reason']} |")
+        lines += [""]
+    if r["tools"]:
+        lines += ["## Web tools", "", "| Task | Tool | Status | Detail |", "|---|---|---|---|"]
+        for t in r["tools"]:
+            lines.append(f"| {t['task']} | {t['tool']} | {t['status']} | {t['detail']} |")
         lines += [""]
     if r["failures"]:
         lines += ["## Failures", "", "| Task | Attempt | Provider | Error |", "|---|---|---|---|"]

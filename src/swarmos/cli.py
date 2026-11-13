@@ -65,6 +65,69 @@ async def _run(args: argparse.Namespace) -> int:
     return 0 if d.status.value in ("completed", "partial") else 1
 
 
+def _gh(*argv: str, input_text: str | None = None) -> str:
+    """Run the GitHub CLI (uses the user's existing auth). Raises RuntimeError on failure."""
+    import subprocess
+
+    res = subprocess.run(["gh", *argv], capture_output=True, text=True, input=input_text)
+    if res.returncode != 0:
+        raise RuntimeError(f"gh {' '.join(argv)} failed: {(res.stderr or '').strip()[:200]}")
+    return res.stdout
+
+
+async def _pr_review(args: argparse.Namespace) -> int:
+    """Run the swarm on one pull request: fetch title/body/diff via gh, produce a merged review,
+    save it to artifacts/, and optionally post it as a PR comment."""
+    import json
+
+    from swarmos.contracts import CollaborationMode, Deliverable, RunRequest
+    from swarmos.synthesis import render_markdown
+
+    meta = json.loads(_gh("pr", "view", str(args.pr_number), "--repo", args.repo, "--json", "title,body"))
+    diff = _gh("pr", "diff", str(args.pr_number), "--repo", args.repo)
+    brief = (
+        f"Review this pull request: {meta['title']}\n\n"
+        f"PR description:\n{meta['body'] or '(none)'}\n\n"
+        "Act as a code-review team: find bugs, security problems, missing or wrong tests, and style issues. "
+        "Reference file paths and line hints from the diff. Grade each issue by severity.\n\n"
+        f"Diff:\n{diff[:12000]}"
+    )
+    settings = Settings.from_env()
+    if args.database_url:
+        settings.database_url = args.database_url
+    if args.providers_file:
+        settings.providers_file = args.providers_file
+    store = Store(settings.database_url)
+    await store.init()
+    registry = ProviderRegistry.from_configs(load_provider_configs(settings.providers_file))
+    orch = Orchestrator(settings, registry, store)
+    req = RunRequest(idea=brief, mode=CollaborationMode(args.mode), cross_review=True,
+                     research=args.research, budget_usd=args.budget, max_tasks=args.max_tasks,
+                     concurrency=args.concurrency, language=args.lang,
+                     providers=args.providers.split(",") if args.providers else None)
+    try:
+        run_id, _ = await orch.submit(req)
+        await orch.wait(run_id)
+        row = await store.get_run(run_id)
+        if row.deliverable is None:
+            print(f"review run {run_id} produced no result: {row.error or row.status}", file=sys.stderr)
+            return 1
+        d = Deliverable.model_validate(row.deliverable)
+    finally:
+        await orch.shutdown()
+        await store.close()
+    md = render_markdown(d)
+    out = Path(f"artifacts/pr-{args.repo.replace('/', '-')}-{args.pr_number}-review.md")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(md, encoding="utf-8")
+    print(md)
+    print(f"\nwrote {out} (run {d.run_id}, status {d.status.value})")
+    if args.post:
+        _gh("pr", "comment", str(args.pr_number), "--repo", args.repo, "--body-file", str(out))
+        print("posted the review as a PR comment")
+    return 0 if d.status.value in ("completed", "partial") else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="swarmos")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -91,10 +154,26 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8000)
 
+    rv = sub.add_parser("pr-review", help="review a GitHub pull request with the swarm (uses your gh CLI)")
+    rv.add_argument("repo", help="owner/repo, e.g. uottawaSESA/sesa-website")
+    rv.add_argument("pr_number", type=int)
+    rv.add_argument("--post", action="store_true", help="post the review as a PR comment")
+    rv.add_argument("--research", action="store_true", help="let reviewers search the web")
+    rv.add_argument("--budget", type=float, default=1.0, help="per-run budget in USD")
+    rv.add_argument("--max-tasks", type=int, default=6)
+    rv.add_argument("--concurrency", type=int, default=4)
+    rv.add_argument("--mode", choices=[m.value for m in CollaborationMode], default="dynamic")
+    rv.add_argument("--lang", choices=["en", "fr", "zh"], default="en")
+    rv.add_argument("--providers")
+    rv.add_argument("--providers-file")
+    rv.add_argument("--database-url")
+
     args = p.parse_args(argv)
     load_dotenv()  # ./.env, never overrides variables already exported
     if args.cmd == "run":
         return asyncio.run(_run(args))
+    if args.cmd == "pr-review":
+        return asyncio.run(_pr_review(args))
     if args.cmd == "setup":
         import getpass
 

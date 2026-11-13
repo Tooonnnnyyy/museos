@@ -104,6 +104,10 @@ async def make_plan(ctx: RunContext, request: RunRequest) -> Plan:
         plan = fallback_plan(request.idea, request.max_tasks)
 
     plan = plan.model_copy(update={"requires_cross_review": request.cross_review})
+    if request.research:  # read-only web tools for tasks that ask for research capability
+        for t in plan.tasks:
+            if "research" in t.required_capabilities or t.role.value == "research_analyst":
+                t.tools_allowed = ["web_search", "web_fetch"]
     if request.task_timeout_s:
         plan.tasks = [t.model_copy(update={"timeout_s": request.task_timeout_s}) for t in plan.tasks]
     if request.mode is CollaborationMode.fan_out:

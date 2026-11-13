@@ -14,7 +14,8 @@ from statistics import median
 from typing import Any
 
 from swarmos.blindtest import tally
-from swarmos.store import AgentRunRow, ComparisonRow, EventRow, PolicyDecisionRow, RunRow, Store, UsageRow
+from swarmos.store import (AgentRunRow, ComparisonRow, EventRow, PolicyDecisionRow, RunRow, Store, ToolRunRow,
+                           UsageRow)
 
 VALID_RANGES = (7, 28, 90, 365)
 _DEFAULT_RANGE = 28
@@ -40,7 +41,7 @@ def window_from_days(days: int, now: datetime | None = None) -> tuple[datetime, 
 
 
 def _overview(runs: list[RunRow], attempts: list[AgentRunRow], usage: list[UsageRow],
-              comparisons: list[ComparisonRow]) -> dict[str, Any]:
+              comparisons: list[ComparisonRow], tool_runs: list[Any]) -> dict[str, Any]:
     statuses = Counter(r.status for r in runs)
     done = statuses["completed"] + statuses.get("partial", 0)
     latencies = [a.latency_ms for a in attempts]
@@ -53,6 +54,7 @@ def _overview(runs: list[RunRow], attempts: list[AgentRunRow], usage: list[Usage
         "spend_usd": round(sum(u.cost_usd for u in usage), 4),
         "model_calls": len(attempts),
         "failed_calls": sum(a.status != "completed" for a in attempts),
+        "tool_calls": len(tool_runs),
         "tokens": sum(u.input_tokens + u.output_tokens for u in usage),
         "p50_latency_ms": int(_median(latencies) or 0),
         "council": {
@@ -81,6 +83,7 @@ async def summary(store: Store, days: int | None = None, workspace_id: str | Non
     decisions = [d for d in await store.rows_between(PolicyDecisionRow, since, until) if d.run_id in run_ids]
     events = [e for e in await store.events_between(since, until) if e.run_id in run_ids]
     comparisons = [c for c in await store.rows_between(ComparisonRow, since, until) if c.run_id in run_ids]
+    tool_runs = [t for t in await store.rows_between(ToolRunRow, since, until) if t.run_id in run_ids]
 
     prev_runs = await store.runs_between(prev_since, since, workspace_id)
     prev_run_ids = {r.id for r in prev_runs}
@@ -89,8 +92,8 @@ async def summary(store: Store, days: int | None = None, workspace_id: str | Non
     prev_comparisons = [c for c in await store.rows_between(ComparisonRow, prev_since, since)
                         if c.run_id in prev_run_ids]
 
-    overview = _overview(runs, attempts, usage, comparisons)
-    prev = _overview(prev_runs, prev_attempts, prev_usage, prev_comparisons)
+    overview = _overview(runs, attempts, usage, comparisons, tool_runs)
+    prev = _overview(prev_runs, prev_attempts, prev_usage, prev_comparisons, [])
 
     # --- daily series, gaps filled
     days_map = {(since + timedelta(days=i)).date(): i for i in range(days)}

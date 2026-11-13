@@ -106,6 +106,8 @@ whatever language the idea is written in. Finished runs keep their language.
 
 ```bash
 uv run swarmos run "your idea" --clarify --cross-review --lang en --budget 0.5 --out artifacts/idea.md
+uv run swarmos run "your idea" --research          # research tasks may search the web
+uv run swarmos pr-review Tooonnnnyyy/museos 42       # review a PR with the swarm (uses gh CLI)
 ```
 
 ## Cost and limits
@@ -128,6 +130,7 @@ uv run swarmos run "your idea" --clarify --cross-review --lang en --budget 0.5 -
 | `SWARMOS_ALLOWED_HOSTS` | `localhost,127.0.0.1,[::1]` | Host names the server answers to |
 | `SWARMOS_AUTH_ENABLED` | `true` | Require signup/login (session cookie). `false` restores anonymous single-user mode |
 | `SWARMOS_SESSION_TTL_DAYS` | `30` | How long a login session stays valid |
+| `SWARMOS_TOOLS_ENABLED` | `true` | Server switch for the read-only web tools (search/fetch) |
 
 Run options (`swarmos run` flags and `POST /runs` fields):
 
@@ -135,6 +138,7 @@ Run options (`swarmos run` flags and `POST /runs` fields):
 |---|---|---|
 | `--clarify` / `clarify` | off (on in the page) | Chief asks before dispatching |
 | `--cross-review` / `cross_review` | off (on in the page) | One bounded review round |
+| `--research` / `research` | off | Research tasks may search the web and fetch pages (policy-gated, read-only) |
 | `compare`, `baseline_provider` | off | Blind test against one single model |
 | `--lang` / `language` | follows the idea | `en`, `fr` or `zh` |
 | `--mode` / `mode` | `dynamic` | `dynamic`: Chief routes each task. `fan_out`: every task to every model. `manual`: only `--providers` |

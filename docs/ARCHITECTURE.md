@@ -34,6 +34,8 @@ A blind test adds one more call beside the run: a single model answers the same 
 | `store.py` | SQLAlchemy models and persistence (SQLite by default, PostgreSQL optional) |
 | `analytics.py` | GA4-style aggregate numbers over a date window; derives everything from ledger rows |
 | `receipt.py` | Decision Receipt for one run, in JSON and Markdown; built from the ledger, never from a key |
+| `tools.py` | Read-only web tools (search/fetch) with SSRF guard and plain-text extraction |
+| `cli.py` (`pr-review`) | Fetch a PR via `gh`, run the swarm on it, write the review to `artifacts/`, optionally post it |
 | `api.py`, `cli.py`, `web/index.html` | HTTP API, command line, and the Command Center page |
 
 ## What is stored

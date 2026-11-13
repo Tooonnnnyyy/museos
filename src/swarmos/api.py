@@ -391,7 +391,7 @@ def create_app(settings: Settings | None = None, registry: ProviderRegistry | No
         return build_receipt(
             row, await s.list_tasks(run_id), await s.list_agent_runs(run_id), await s.list_usage(run_id),
             await s.list_policy_decisions(run_id), await s.list_events(run_id),
-            await s.get_comparison_by_run(run_id))
+            await s.get_comparison_by_run(run_id), await s.list_tool_runs(run_id))
 
     return app
 

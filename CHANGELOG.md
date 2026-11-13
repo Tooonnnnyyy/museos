@@ -56,6 +56,28 @@
   `SWARMOS_*` env vars, `swarmos.db` default, `swarmos_session` cookie, `swarmos_*` identifiers,
   HTML brand strings. **GitHub repo URL stays `Tooonnnnyyy/museos`** (repo rename deferred by user).
 
+## Done (committed) — WEB TOOLS + PR REVIEW + WORKFLOW
+
+### 7. Read-only web tools (research)
+- `src/swarmos/tools.py`: `web_search` (DuckDuckGo, key-less) + `web_fetch` (byte-capped, SSRF guard,
+  stdlib HTML→text). No tool-calling loop: research tasks are enriched before their one model call
+  (1 search + ≤3 fetches appended as "Verified web sources").
+- Every call is policy-gated (`tool.<name>` vs the task's `tools_allowed`), recorded in a new
+  `tool_runs` table and `tool.used` events; costs $0 but consumes a budget step.
+- Switches: `SWARMOS_TOOLS_ENABLED` (server, default on) + `research: true` per run (UI checkbox,
+  `--research` flag). Receipts gain a "Web tools" section; analytics gains `tool_calls`.
+- SSRF: private/loopback/link-local/reserved hosts refused at resolution time.
+- ADR-007 documents the design.
+
+### 8. PR review swarm (`swarmos pr-review`)
+- `swarmos pr-review <owner/repo> <n> [--post] [--research]` fetches title/body/diff via the user's
+  `gh` CLI, runs the swarm (cross-review on), writes `artifacts/pr-<repo>-<n>-review.md`, and posts
+  the review as a PR comment with `--post`. No GitHub credentials stored.
+
+### 9. WORKFLOW.md
+- Task book for running parallel coding agents (kitty + tmux + worktrees + gh), written for humans
+  and agents alike.
+
 ## How to run / verify
 
 ```bash

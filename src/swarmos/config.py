@@ -59,6 +59,9 @@ class Settings:
     # run to the signed-in user's workspace. The CLI (`swarmos run`) bypasses the API and is unaffected.
     auth_enabled: bool = True
     session_ttl_days: int = 30
+    # Server-level switch for the read-only web tools (search/fetch). Per-run, tools only run when
+    # the request sets research=True and the Chief marks a task's tools_allowed.
+    tools_enabled: bool = True
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -74,4 +77,5 @@ class Settings:
                                    if d.strip()},
             auth_enabled=_bool(os.environ.get("SWARMOS_AUTH_ENABLED"), True),
             session_ttl_days=int(os.environ.get("SWARMOS_SESSION_TTL_DAYS", "30")),
+            tools_enabled=_bool(os.environ.get("SWARMOS_TOOLS_ENABLED"), True),
         )
