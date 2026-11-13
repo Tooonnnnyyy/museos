@@ -22,6 +22,10 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
+def _aware(dt: datetime) -> datetime:
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)  # SQLite returns naive datetimes
+
+
 def _uuid() -> str:
     return uuid.uuid4().hex
 
@@ -144,6 +148,22 @@ class ComparisonRow(Base):
     voted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class UserRow(Base):
+    __tablename__ = "users"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    email: Mapped[str] = mapped_column(String(254), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(256))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class SessionRow(Base):
+    __tablename__ = "sessions"
+    token: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class Store:
     def __init__(self, database_url: str):
         self.engine: AsyncEngine = create_async_engine(database_url, future=True)
@@ -214,9 +234,12 @@ class Store:
         async with self.sessions() as s:
             return await s.get(RunRow, run_id)
 
-    async def list_runs(self, limit: int = 20) -> list[RunRow]:
+    async def list_runs(self, limit: int = 20, workspace_id: str | None = None) -> list[RunRow]:
         async with self.sessions() as s:
-            return list((await s.execute(select(RunRow).order_by(RunRow.created_at.desc()).limit(limit))).scalars())
+            q = select(RunRow).order_by(RunRow.created_at.desc()).limit(limit)
+            if workspace_id is not None:
+                q = q.where(RunRow.workspace_id == workspace_id)
+            return list((await s.execute(q)).scalars())
 
     async def get_comparison(self, comparison_id: str) -> ComparisonRow | None:
         async with self.sessions() as s:
@@ -343,3 +366,49 @@ class Store:
                        payload=payload)
         await self.add(row)
         return row.event_id
+
+    # ------------------------------------------------------------------ auth
+    async def create_user(self, email: str, password_hash: str) -> UserRow | None:
+        """Create a user; return None on a duplicate email (unique constraint)."""
+        async with self.sessions() as s:
+            row = UserRow(email=email, password_hash=password_hash)
+            s.add(row)
+            try:
+                await s.commit()
+            except Exception:
+                await s.rollback()
+                return None
+            return row
+
+    async def get_user(self, user_id: str) -> UserRow | None:
+        async with self.sessions() as s:
+            return await s.get(UserRow, user_id)
+
+    async def get_user_by_email(self, email: str) -> UserRow | None:
+        async with self.sessions() as s:
+            return (await s.execute(select(UserRow).where(UserRow.email == email))).scalar_one_or_none()
+
+    async def create_session(self, user_id: str, token: str, expires_at: datetime) -> str:
+        async with self.sessions() as s:
+            s.add(SessionRow(token=token, user_id=user_id, expires_at=expires_at))
+            await s.commit()
+        return token
+
+    async def get_session(self, token: str) -> SessionRow | None:
+        """Return the session if it exists and has not expired, else None (expired rows are deleted)."""
+        async with self.sessions() as s:
+            row = await s.get(SessionRow, token)
+            if row is None:
+                return None
+            if _aware(row.expires_at) <= datetime.now(UTC):
+                await s.delete(row)
+                await s.commit()
+                return None
+            return row
+
+    async def delete_session(self, token: str) -> None:
+        async with self.sessions() as s:
+            row = await s.get(SessionRow, token)
+            if row is not None:
+                await s.delete(row)
+                await s.commit()
