@@ -14,8 +14,10 @@ API keys, any OpenAI-compatible endpoint, or a subscription through a command-li
 | File | Holds |
 |---|---|
 | `README.md` | What it is, quick start, usage, configuration. Usage guides: `README.zh-CN.md`, `README.fr.md` |
+| `CHANGELOG.md` | **Handoff log** — what landed, what is in progress, how to verify. Read first when resuming. |
+| `WORKFLOW.md` | How to run several coding agents in parallel (kitty + tmux + worktrees + gh) without conflicts |
 | `docs/ARCHITECTURE.md` | How a run flows through the code, data model, known limitations |
-| `docs/adr/` | Decisions: 001 gateway, 002 orchestration, 003 no queue yet, 004 database, 005 subscriptions |
+| `docs/adr/` | Decisions: 001 gateway, 002 orchestration, 003 no queue yet, 004 database, 005 subscriptions, 006 auth, 007 web tools |
 | `CONTRIBUTING.md`, `SECURITY.md` | Contribution terms and security model |
 
 ## Rules that are easy to break
@@ -28,8 +30,15 @@ API keys, any OpenAI-compatible endpoint, or a subscription through a command-li
 - Do not ship model IDs or prices that were not checked in the provider's own docs. Users type model IDs.
 - Subscription providers (`claude_cli`, `command`) are personal, local and low-volume: `max_concurrency = 1`
   and the call caps stay. Read ADR-005 before touching them. Never present them as a way to serve others.
-- Agents have no tools and SwarmAgentOS performs no external writes. Any future one must pass
-  `policy.PolicyEngine` and the kill switch.
+- Agents have no free-form tool loop and SwarmAgentOS performs no external writes. The only tools are the
+  read-only web ones (`tools.py`: search/fetch), which run only when the request sets `research: true`,
+  the server has `SWARMOS_TOOLS_ENABLED`, and the task's `tools_allowed` passes `PolicyEngine`. Any future
+  one must pass `policy.PolicyEngine` and the kill switch. See ADR-007.
+- Auth is on by default: `users`/`sessions` tables, scrypt password hashes, httpOnly session cookie,
+  per-user isolation through `RunRow.workspace_id = user:<id>`. Tests opt out via `auth_enabled=False`.
+  See ADR-006.
+- The GA4-style analytics page (`/analytics`) and Decision Receipts (`/runs/{id}/receipt.md`) derive
+  everything from ledger rows; never add a key, a prompt or a raw error to them.
 - Do not claim something works unless it was run. Mocks in tests; live calls only with a small budget.
 - Reasoning models spend output tokens on thinking: keep `max_output_tokens` at 4000 or more.
 - Three languages: every user-facing string exists in `en`, `fr` and `zh` (page: `I18N` in
@@ -49,5 +58,7 @@ uv run swarmos setup        # connect a model
 uv run swarmos providers    # what is configured
 uv run swarmos serve        # web page at http://127.0.0.1:8000
 uv run swarmos run "idea" --clarify --cross-review --budget 0.10
+uv run swarmos run "idea" --research          # research tasks may search the web
+uv run swarmos pr-review Tooonnnnyyy/museos 42 --post   # swarm PR review (uses gh CLI)
 uv run pytest -q
 ```

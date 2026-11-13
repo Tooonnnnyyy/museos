@@ -72,6 +72,32 @@ Rules:
   `providers.toml`, `*.db`).
 - Every agent you run has write access to your GitHub as *you*: review every PR before merge.
 
+## Pitfalls (all seen in practice)
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Two agents overwrite each other's files | same directory | worktree + branch per agent (the one rule) |
+| Agent drifts, edits unrelated code | long session, stale context | one task book per session; fresh session per chunk |
+| Agent pushes to a shared branch | no protection | `main` requires reviews + CI; agents only get their own branches |
+| Merge conflicts pile up | lanes too wide | small PRs, merge green ones daily |
+| Token bill explodes | parallel frontier models | small/cheap models for mechanical work |
+
+## Rollbacks and releases
+
+- Tag every merge that ships: `gh release create v0.1.0 --generate-notes`; rollback = redeploy the
+  previous tag.
+- `main` stays releasable: nothing lands without green CI.
+
+## One-command lane opener (kitty)
+
+```bash
+new-agent() {  # new-agent <repo> <lane> "<one-line task>"
+  git worktree add ../"$1-$2" -b "$2" && cd ../"$1-$2" &&
+  kitty @ new-window --cwd "$(pwd)" --title "$1:$2" &&
+  printf '# Task\n%s\nRules: read AGENTS.md; edit only this worktree; open a PR via gh; write status to local://status-%s.md\n' "$3" "$2" > TASK.md
+}
+```
+
 ## SwarmAgentOS inside the workflow
 
 SwarmAgentOS is itself the "cross-review lane": one idea in, several models at work, one merged
