@@ -250,6 +250,27 @@ class Store:
         async with self.sessions() as s:
             return list((await s.execute(select(model).order_by(model.created_at.desc()).limit(limit))).scalars())
 
+    async def runs_between(self, since: datetime, until: datetime) -> list[RunRow]:
+        """Runs created in ``[since, until)``, oldest first."""
+        async with self.sessions() as s:
+            return list((await s.execute(select(RunRow).where(RunRow.created_at >= since,
+                                                              RunRow.created_at < until)
+                                         .order_by(RunRow.created_at))).scalars())
+
+    async def rows_between(self, model: type[Base], since: datetime, until: datetime) -> list[Any]:
+        """Rows of one table created in ``[since, until)``, oldest first."""
+        async with self.sessions() as s:
+            return list((await s.execute(select(model).where(model.created_at >= since,
+                                                             model.created_at < until)
+                                         .order_by(model.created_at))).scalars())
+
+    async def events_between(self, since: datetime, until: datetime) -> list[EventRow]:
+        """Events occurring in ``[since, until)``, oldest first."""
+        async with self.sessions() as s:
+            return list((await s.execute(select(EventRow).where(EventRow.occurred_at >= since,
+                                                                EventRow.occurred_at < until)
+                                         .order_by(EventRow.occurred_at))).scalars())
+
     async def find_event(self, run_id: str, event_type: str) -> EventRow | None:
         async with self.sessions() as s:
             return (await s.execute(select(EventRow).where(EventRow.run_id == run_id, EventRow.event_type == event_type)

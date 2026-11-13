@@ -69,6 +69,26 @@ def create_app(settings: Settings | None = None, registry: ProviderRegistry | No
     async def admin_page() -> str:
         return (Path(__file__).parent / "web" / "admin.html").read_text(encoding="utf-8")
 
+    @app.get("/analytics", response_class=HTMLResponse, include_in_schema=False)
+    async def analytics_page() -> str:
+        return (Path(__file__).parent / "web" / "analytics.html").read_text(encoding="utf-8")
+
+    @app.get("/analytics/summary")
+    async def analytics_summary(days: int | None = Query(None)) -> dict[str, Any]:
+        from museos.analytics import summary
+
+        return await summary(app.state.store, days)
+
+    @app.get("/runs/{run_id}/receipt")
+    async def run_receipt(run_id: str) -> dict[str, Any]:
+        return await _receipt_view(run_id)
+
+    @app.get("/runs/{run_id}/receipt.md", response_class=Response, include_in_schema=False)
+    async def run_receipt_markdown(run_id: str) -> Response:
+        from museos.receipt import receipt_markdown
+
+        return Response(receipt_markdown(await _receipt_view(run_id)), media_type="text/markdown")
+
     @app.get("/admin/summary")
     async def admin_summary() -> dict[str, Any]:
         from museos.admin import summarize
@@ -251,6 +271,16 @@ def create_app(settings: Settings | None = None, registry: ProviderRegistry | No
         elif include_deliverable:
             view["deliverable"] = None
         return view
+
+    async def _receipt_view(run_id: str) -> dict[str, Any]:
+        from museos.receipt import build_receipt
+
+        row = await _require(run_id)
+        s: Store = app.state.store
+        return build_receipt(
+            row, await s.list_tasks(run_id), await s.list_agent_runs(run_id), await s.list_usage(run_id),
+            await s.list_policy_decisions(run_id), await s.list_events(run_id),
+            await s.get_comparison_by_run(run_id))
 
     return app
 
