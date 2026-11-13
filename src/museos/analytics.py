@@ -29,9 +29,14 @@ def _median(values: list[float]) -> float | None:
 
 
 def window_from_days(days: int, now: datetime | None = None) -> tuple[datetime, datetime]:
-    """``[start, end)`` for the last ``days`` UTC days, ending at the start of the current UTC day."""
-    end = (now or datetime.now(UTC)).replace(hour=0, minute=0, second=0, microsecond=0)
-    return end - timedelta(days=days), end
+    """``[start, end)``: the last ``days`` calendar days, ending at the current moment.
+
+    ``start`` is midnight of the earliest day and ``end`` is "now", so today's runs are
+    included (GA4 semantics: the last day is always partial).
+    """
+    now = now or datetime.now(UTC)
+    start_day = now.date() - timedelta(days=days - 1)
+    return datetime(start_day.year, start_day.month, start_day.day, tzinfo=UTC), now
 
 
 def _overview(runs: list[RunRow], attempts: list[AgentRunRow], usage: list[UsageRow],
@@ -147,6 +152,7 @@ async def summary(store: Store, days: int | None = None) -> dict[str, Any]:
     ]
 
     denied = [d for d in decisions if d.decision != "ALLOW"]
+    statuses = Counter(r.status for r in runs)
 
     def _delta(cur: Any, old: Any) -> float | None:
         if old in (0, None) or cur is None:

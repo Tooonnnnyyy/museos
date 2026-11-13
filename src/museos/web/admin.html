@@ -74,7 +74,7 @@ td.num,th.num{text-align:right}
 <div class="wrap"><nav class="nav" aria-label="Main">
   <a class="brand" href="/"><span class="mark">M</span><span>MuseOS</span></a>
   <div class="nav__links">
-    <a href="/" class="keep" data-i18n="back"></a>
+    <a href="/" class="keep" data-i18n="back"></a><a href="/analytics" class="keep" data-i18n="analytics"></a>
     <span class="lang keep" role="group" aria-label="Language">
       <button type="button" data-lang="en">EN</button><button type="button" data-lang="fr">FR</button><button type="button" data-lang="zh">中文</button>
     </span>
@@ -115,7 +115,7 @@ td.num,th.num{text-align:right}
 <script>
 const I18N = {
 en: {
-  back: "← Command Center", eyebrow: "Admin · this machine only", title: "What MuseOS has been doing.",
+  back: "← Command Center", analytics: "Analytics", eyebrow: "Admin · this machine only", title: "What MuseOS has been doing.",
   intro: "Usage, cost and health for every model you connected. Read-only, except for retrying a paused model. Keys are shown only as present or missing.",
   tRuns: "Runs", tCalls: "Model calls", tFailed: "Failed calls", tCost: "Spent", tTokens: "Tokens",
   modelsTitle: "Models", hModel: "Model", hState: "State", hKey: "Key", hCalls: "Calls", hFail: "Failed", h24: "Last 24 h", hLatency: "Avg time", hTokens: "Tokens", hCost: "Cost", hCaps: "Limits",
@@ -128,7 +128,7 @@ en: {
   footer: "MuseOS admin · local only · change settings in .env and providers.toml, then restart", loadFail: "Could not load the numbers."
 },
 fr: {
-  back: "← Command Center", eyebrow: "Administration · cette machine uniquement", title: "Ce que MuseOS a fait.",
+  back: "← Command Center", analytics: "Analyse", eyebrow: "Administration · cette machine uniquement", title: "Ce que MuseOS a fait.",
   intro: "Utilisation, coût et état de chaque modèle connecté. Lecture seule, sauf pour relancer un modèle en pause. Les clés sont seulement indiquées comme présentes ou absentes.",
   tRuns: "Exécutions", tCalls: "Appels aux modèles", tFailed: "Appels échoués", tCost: "Dépensé", tTokens: "Tokens",
   modelsTitle: "Modèles", hModel: "Modèle", hState: "État", hKey: "Clé", hCalls: "Appels", hFail: "Échecs", h24: "24 h", hLatency: "Durée moy.", hTokens: "Tokens", hCost: "Coût", hCaps: "Limites",
@@ -141,7 +141,7 @@ fr: {
   footer: "Administration MuseOS · local uniquement · modifiez .env et providers.toml puis redémarrez", loadFail: "Impossible de charger les chiffres."
 },
 zh: {
-  back: "← Command Center", eyebrow: "后台 · 仅限本机", title: "MuseOS 都做了什么。",
+  back: "← Command Center", analytics: "分析", eyebrow: "后台 · 仅限本机", title: "MuseOS 都做了什么。",
   intro: "你接入的每个模型的用量、费用和状态。只读，只有「重试暂停的模型」可以操作。Key 只显示有或没有。",
   tRuns: "运行次数", tCalls: "模型调用", tFailed: "失败调用", tCost: "已花费", tTokens: "Tokens",
   modelsTitle: "模型", hModel: "模型", hState: "状态", hKey: "Key", hCalls: "调用", hFail: "失败", h24: "近 24 小时", hLatency: "平均用时", hTokens: "Tokens", hCost: "费用", hCaps: "限制",

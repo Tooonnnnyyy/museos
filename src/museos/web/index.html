@@ -176,7 +176,7 @@ button.item:hover .item__t{text-decoration:underline;text-underline-offset:4px}
 <div class="wrap"><nav class="nav" aria-label="Main">
   <a class="brand" href="#top"><span class="mark">M</span><span>MuseOS</span></a>
   <div class="nav__links">
-    <a href="#now" data-i18n="navNow"></a><a href="#blind" data-i18n="navBlind"></a><a href="#history" data-i18n="navHistory"></a><a href="/admin" data-i18n="navAdmin"></a>
+    <a href="#now" data-i18n="navNow"></a><a href="#blind" data-i18n="navBlind"></a><a href="#history" data-i18n="navHistory"></a><a href="/analytics" data-i18n="navAnalytics"></a><a href="/admin" data-i18n="navAdmin"></a>
     <span class="lang keep" role="group" aria-label="Language">
       <button type="button" data-lang="en">EN</button><button type="button" data-lang="fr">FR</button><button type="button" data-lang="zh">中文</button>
     </span>
@@ -239,7 +239,7 @@ button.item:hover .item__t{text-decoration:underline;text-underline-offset:4px}
 <script>
 const I18N = {
 en: {
-  navAdmin: "Admin", navNow: "Current run", navBlind: "Blind test", navHistory: "History", connecting: "Connecting", online: "{0} models online", offline: "Connection failed",
+  navAdmin: "Admin", navAnalytics: "Analytics", navNow: "Current run", navBlind: "Blind test", navHistory: "History", connecting: "Connecting", online: "{0} models online", offline: "Connection failed",
   tagline: "Command Center · Your one-person multi-model team",
   hero1: "One idea in.", hero2a: "One ", hero2b: "result", hero2c: " out.",
   lede: "Chief first checks what you want, then splits the work across different models in parallel, has them review each other, and merges one answer that shows the disagreements and limits.",
@@ -281,7 +281,7 @@ en: {
   st_completed: "Done", st_partial: "Partly done", st_failed: "Failed", st_cancelled: "Cancelled", st_pending: "Waiting", st_blocked: "Waiting upstream", st_ready: "Ready", st_timed_out: "Timed out", st_skipped: "Skipped"
 },
 fr: {
-  navAdmin: "Administration", navNow: "Tâche en cours", navBlind: "Test à l'aveugle", navHistory: "Historique", connecting: "Connexion", online: "{0} modèles en ligne", offline: "Connexion impossible",
+  navAdmin: "Administration", navAnalytics: "Analyse", navNow: "Tâche en cours", navBlind: "Test à l'aveugle", navHistory: "Historique", connecting: "Connexion", online: "{0} modèles en ligne", offline: "Connexion impossible",
   tagline: "Command Center · Votre équipe multi-modèles à vous seul",
   hero1: "Une idée entre.", hero2a: "Un ", hero2b: "résultat", hero2c: " en sort.",
   lede: "Chief vérifie d'abord ce que vous voulez, répartit le travail entre plusieurs modèles en parallèle, les fait se relire, puis fusionne une réponse qui montre les désaccords et les limites.",
@@ -323,7 +323,7 @@ fr: {
   st_completed: "Terminée", st_partial: "Partielle", st_failed: "Échec", st_cancelled: "Annulée", st_pending: "En attente", st_blocked: "Attend l'amont", st_ready: "Prête", st_timed_out: "Délai dépassé", st_skipped: "Ignorée"
 },
 zh: {
-  navAdmin: "后台", navNow: "当前任务", navBlind: "盲测", navHistory: "历史", connecting: "连接中", online: "{0} 个模型在线", offline: "连接失败",
+  navAdmin: "后台", navAnalytics: "分析", navNow: "当前任务", navBlind: "盲测", navHistory: "历史", connecting: "连接中", online: "{0} 个模型在线", offline: "连接失败",
   tagline: "Command Center · 你一个人的多模型团队",
   hero1: "一个想法进来。", hero2a: "一份", hero2b: "结果", hero2c: "出来。",
   lede: "Chief 先确认你想要什么，再把任务分给不同模型并行做，互相审查，最后合成一份带分歧和局限的结论。",

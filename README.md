@@ -153,7 +153,15 @@ Run options (`museos run` flags and `POST /runs` fields):
 | `POST /comparisons/{id}/vote` | `{"choice": "A"\|"B"\|"tie"}`; reveals which was which |
 | `GET /admin`, `GET /admin/summary` | Admin page and its numbers (no secrets) |
 | `POST /admin/providers/{id}/reset` | Retry a model paused by the circuit breaker |
+| `GET /analytics`, `GET /analytics/summary?days=7\|28\|90\|365` | GA4-style dashboard and its numbers: runs, spend, calls, latency, provider breakdown, run funnel, council score |
+| `GET /runs/{id}/receipt`, `GET /runs/{id}/receipt.md` | Decision Receipt for one run — who spoke, what it cost, policy decisions, failures (JSON or Markdown) |
 | `GET /providers`, `GET /health` | Configured models (no secrets); liveness |
+
+The **Analytics** page (`/analytics`) renders every number from your own ledger tables within a date
+window — nothing is hardcoded, so a fresh install shows an empty state and every user sees only their own
+runs. The **Decision Receipt** is the proof behind a deliverable: it is built from `agent_runs`,
+`usage_records`, `policy_decisions` and `events`, never from a prompt or a key, and is safe to archive or
+share.
 
 ## Development
 
