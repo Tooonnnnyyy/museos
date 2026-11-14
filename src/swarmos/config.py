@@ -62,6 +62,11 @@ class Settings:
     # Server-level switch for the read-only web tools (search/fetch). Per-run, tools only run when
     # the request sets research=True and the Chief marks a task's tools_allowed.
     tools_enabled: bool = True
+    # Google Tag Manager container id (GTM-…). Set it and every served page loads the container,
+    # so GA4 and other tags are configured in GTM, not in code. Unset: no tracking code at all.
+    gtm_id: str | None = None
+    # Emails allowed to open the global analytics view (/analytics/admin). Owner-only tooling.
+    admin_emails: frozenset[str] = field(default_factory=frozenset)
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -78,4 +83,7 @@ class Settings:
             auth_enabled=_bool(os.environ.get("SWARMOS_AUTH_ENABLED"), True),
             session_ttl_days=int(os.environ.get("SWARMOS_SESSION_TTL_DAYS", "30")),
             tools_enabled=_bool(os.environ.get("SWARMOS_TOOLS_ENABLED"), True),
+            gtm_id=os.environ.get("SWARMOS_GTM_ID") or None,
+            admin_emails=frozenset(e.strip().lower() for e in
+                                   os.environ.get("SWARMOS_ADMIN_EMAILS", "").split(",") if e.strip()),
         )

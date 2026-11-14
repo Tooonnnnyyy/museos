@@ -191,3 +191,91 @@ async def summary(store: Store, days: int | None = None, workspace_id: str | Non
                      for r in sorted(runs, key=lambda r: r.created_at, reverse=True)],
         "empty": not runs and not attempts,
     }
+
+
+async def admin_summary(store: Store, days: int = 28) -> dict[str, Any]:
+    """Owner-only view across every workspace: who registered, who is active, new vs returning.
+
+    The regular summary() scopes to one workspace; this one deliberately does not. It maps
+    workspaces back to users through the "user:{id}" convention and aggregates per-user numbers.
+    Emails are returned for the owner's own tooling (never exposed on the public analytics page).
+    """
+    days = days if days in VALID_RANGES else _DEFAULT_RANGE
+    since, until = window_from_days(days)
+
+    users = await store.list_users()
+    runs = await store.runs_between(since, until)
+    prev_runs = await store.runs_between(since - timedelta(days=days), since)
+    attempts = await store.rows_between(AgentRunRow, since, until)
+    usage = await store.rows_between(UsageRow, since, until)
+
+    run_ids = {r.id for r in runs}
+    attempts = [a for a in attempts if a.run_id in run_ids]
+    usage = [u for u in usage if u.run_id in run_ids]
+
+    by_workspace: dict[str, dict[str, Any]] = defaultdict(
+        lambda: {"runs": 0, "cost_usd": 0.0, "calls": 0, "last_active": None})
+    for r in runs:
+        w = by_workspace[r.workspace_id]
+        w["runs"] += 1
+        t = _aware(r.created_at)
+        if w["last_active"] is None or t > w["last_active"]:
+            w["last_active"] = t
+    run_ws = {r.id: r.workspace_id for r in runs}
+    for a in attempts:
+        by_workspace[run_ws.get(a.run_id, "?")]["calls"] += 1
+    for u in usage:
+        by_workspace[run_ws.get(u.run_id, "?")]["cost_usd"] = round(
+            by_workspace[run_ws.get(u.run_id, "?")]["cost_usd"] + u.cost_usd, 4)
+
+    # Daily active users, split new vs returning. "New" = the user registered that day.
+    day_list = sorted((since + timedelta(days=i)).date() for i in range(days))
+    days_map = {d: i for i, d in enumerate(day_list)}
+    registered_by_ws: dict[str, Any] = {f"user:{u.id}": _aware(u.created_at).date() for u in users}
+    series = [{"date": d.isoformat(), "active": 0, "new": 0, "returning": 0} for d in day_list]
+    active_by_day: dict[int, set[str]] = defaultdict(set)
+    for r in runs:
+        idx = days_map.get(_aware(r.created_at).date())
+        if idx is not None:
+            active_by_day[idx].add(r.workspace_id)
+    for idx, ws in active_by_day.items():
+        series[idx]["active"] = len(ws)
+        fresh = sum(1 for uid in ws if registered_by_ws.get(uid) == day_list[idx])
+        series[idx]["new"] = fresh
+        series[idx]["returning"] = series[idx]["active"] - fresh
+
+    prev_ws = {r.workspace_id for r in prev_runs}
+
+    # Per-user rows.
+    user_rows = []
+    for u in users:
+        ws = f"user:{u.id}"
+        w = by_workspace.get(ws, {"runs": 0, "cost_usd": 0.0, "calls": 0, "last_active": None})
+        user_rows.append({
+            "email": u.email,
+            "registered": _aware(u.created_at).date().isoformat(),
+            "runs": w["runs"],
+            "cost_usd": w["cost_usd"],
+            "calls": w["calls"],
+            "last_active": w["last_active"].date().isoformat() if w["last_active"] else None,
+            "kind": "new" if _aware(u.created_at) >= since else ("returning" if ws in prev_ws else "dormant"),
+        })
+
+    new_users = sum(1 for u in users if _aware(u.created_at) >= since)
+    active_users = len({r.workspace_id for r in runs})
+
+    return {
+        "range": {"days": days, "start": since.date().isoformat(), "end": until.date().isoformat(),
+                  "timezone": "UTC"},
+        "overview": {
+            "users": len(users),
+            "new_users": new_users,
+            "active_users": active_users,
+            "runs": len(runs),
+            "cost_usd": round(sum(u.cost_usd for u in usage), 4),
+            "calls": len(attempts),
+        },
+        "series": series,
+        "users": sorted(user_rows, key=lambda x: (x["last_active"] or "", x["registered"]), reverse=True),
+    }
+
