@@ -403,6 +403,11 @@ class Store:
         async with self.sessions() as s:
             return (await s.execute(select(UserRow).where(UserRow.email == email))).scalar_one_or_none()
 
+    async def list_users(self) -> list[UserRow]:
+        """Every registered user, oldest first. Small for a self-hosted app."""
+        async with self.sessions() as s:
+            return list((await s.execute(select(UserRow).order_by(UserRow.created_at))).scalars())
+
     async def create_session(self, user_id: str, token: str, expires_at: datetime) -> str:
         async with self.sessions() as s:
             s.add(SessionRow(token=token, user_id=user_id, expires_at=expires_at))

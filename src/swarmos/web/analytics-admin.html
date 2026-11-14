@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SwarmOS · Owner analytics</title>
+<style>
+:root{--ink:#11120f;--page:#fff;--paper:#f3efe3;--lime:#d9ff43;--flame:#ff5a36;--violet:#b7a7ff;--bone:#fffdf7;
+  --soft:color-mix(in srgb,var(--ink) 68%,transparent);--rule:2px solid var(--ink);
+  --hair:1px solid color-mix(in srgb,var(--ink) 25%,transparent)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:400 16px/1.5 ui-sans-serif,system-ui,sans-serif}
+.wrap{width:min(100% - 40px,1100px);margin-inline:auto}
+h1{font-size:1.6rem;margin:0}h2{font-size:1.15rem;margin:0 0 12px}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:var(--rule)}
+.nav a{color:inherit;text-decoration:none;font-size:.85rem}.nav a:hover{text-decoration:underline}
+.cells{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0}
+.cell{background:var(--bone);border:var(--rule);padding:14px 16px;border-radius:10px}
+.cell b{display:block;font-size:1.7rem;line-height:1.1}
+.cell span{font-size:.75rem;letter-spacing:.05em;text-transform:uppercase;color:var(--soft)}
+.card{background:var(--bone);border:var(--rule);border-radius:10px;padding:16px;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--soft);padding:8px 10px;border-bottom:var(--hair)}
+td{padding:8px 10px;border-bottom:var(--hair);font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right}
+.pill{display:inline-block;padding:1px 9px;border-radius:999px;font-size:.72rem;border:1px solid var(--ink)}
+.pill.new{background:var(--lime)}.pill.returning{background:var(--violet)}.pill.dormant{background:var(--paper)}
+.bars{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;align-items:end;height:160px;border-bottom:2px solid var(--ink);padding-top:8px}
+.col{display:flex;flex-direction:column;justify-content:flex-end;min-height:2px}
+.col .n{background:var(--lime)}.col .r{background:var(--violet)}
+.days{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;margin-top:6px}
+.days span{text-align:center;font-size:.6rem;color:var(--soft);white-space:nowrap;overflow:hidden}
+.rangectl{margin:0 0 16px}
+.rangectl button{padding:4px 12px;margin-right:6px;border:var(--rule);border-radius:999px;background:var(--page);cursor:pointer;font:inherit;font-size:.8rem}
+.rangectl button.on{background:var(--ink);color:var(--bone)}
+.muted{color:var(--soft);font-size:.85rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="nav">
+  <strong>SwarmOS · Owner analytics</strong>
+  <a href="/analytics">my analytics →</a>
+</nav>
+
+<div class="rangectl" id="range"></div>
+
+<div class="cells" id="kpis"></div>
+
+<div class="card">
+  <h2>Daily active users — new vs returning</h2>
+  <div class="bars" id="bars"></div>
+  <div class="days" id="days"></div>
+  <p class="muted" id="note" style="margin-top:8px"></p>
+</div>
+
+<div class="card">
+  <h2>All users</h2>
+  <div style="overflow-x:auto"><table>
+    <thead><tr><th>Email</th><th>Registered</th><th class="num">Runs</th><th class="num">Calls</th><th class="num">Spent</th><th>Last active</th><th>Kind</th></tr></thead>
+    <tbody id="users"></tbody>
+  </table></div>
+</div>
+
+<p class="muted">Owner-only. Emails and aggregate numbers never leave this page; user workspaces are still isolated everywhere else.</p>
+</div>
+
+<script>
+const RANGES = [7, 28, 90, 365];
+let days = new URLSearchParams(location.search).get("days") | 0 || 28;
+const $ = id => document.getElementById(id);
+const n = v => Number(v).toLocaleString();
+const money = v => "$" + (v < 1 ? Number(v).toFixed(4) : Number(v).toFixed(2));
+
+function renderRange() {
+  $("range").replaceChildren();
+  RANGES.forEach(d => {
+    const b = document.createElement("button");
+    b.textContent = d + "d";
+    b.className = d === days ? "on" : "";
+    b.onclick = () => { days = d; load(); };
+    $("range").append(b);
+  });
+}
+
+async function load() {
+  renderRange();
+  const res = await fetch("/analytics/admin/summary?days=" + days);
+  if (!res.ok) { document.body.textContent = "Forbidden — owner only"; return; }
+  const d = await res.json();
+  const O = d.overview;
+  const kpis = [["Users", O.users], ["New (" + d.range.days + "d)", O.new_users], ["Active (" + d.range.days + "d)", O.active_users],
+                ["Runs", O.runs], ["Calls", O.calls], ["Spent", money(O.cost_usd)]];
+  $("kpis").replaceChildren();
+  kpis.forEach(([label, v]) => {
+    const c = document.createElement("div"); c.className = "cell";
+    c.append(Object.assign(document.createElement("b"), {textContent: n(v)}),
+             Object.assign(document.createElement("span"), {textContent: label}));
+    $("kpis").append(c);
+  });
+
+  const max = Math.max(...d.series.map(s => s.active), 1);
+  $("bars").replaceChildren(); $("days").replaceChildren();
+  d.series.forEach(s => {
+    const col = document.createElement("div"); col.className = "col";
+    if (s.active) {
+      const rv = document.createElement("div"); rv.className = "r";
+      rv.style.height = Math.max(s.returning / max * 100, s.returning ? 1 : 0) + "%";
+      const nw = document.createElement("div"); nw.className = "n";
+      nw.style.height = Math.max(s.new / max * 100, s.new ? 1 : 0) + "%";
+      col.append(rv, nw);
+    }
+    col.title = s.date + " · new " + s.new + " · returning " + s.returning;
+    $("bars").append(col); $("days").append(Object.assign(document.createElement("span"), {textContent: s.date.slice(5)}));
+  });
+  $("note").textContent = "new = registered that day · returning = had a run before · " + d.range.start + " → " + d.range.end;
+
+  $("users").replaceChildren();
+  d.users.forEach(u => {
+    const tr = document.createElement("tr");
+    tr.append(Object.assign(document.createElement("td"), {textContent: u.email}),
+      Object.assign(document.createElement("td"), {textContent: u.registered}),
+      Object.assign(document.createElement("td"), {textContent: n(u.runs), className: "num"}),
+      Object.assign(document.createElement("td"), {textContent: n(u.calls), className: "num"}),
+      Object.assign(document.createElement("td"), {textContent: money(u.cost_usd), className: "num"}),
+      Object.assign(document.createElement("td"), {textContent: u.last_active || "—"}));
+    const kind = document.createElement("td");
+    const pill = document.createElement("span"); pill.className = "pill " + u.kind; pill.textContent = u.kind;
+    kind.append(pill); tr.append(kind);
+    $("users").append(tr);
+  });
+}
+load();
+</script>
+</body>
+</html>

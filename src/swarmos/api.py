@@ -39,6 +39,22 @@ class Credentials(BaseModel):
 SESSION_COOKIE = "swarmos_session"
 
 
+def _gtm_snippet(gtm_id: str) -> str:
+    """The GTM container snippet, injected right after <head> when a container is configured."""
+    return (
+        f"<script async src=\"https://www.googletagmanager.com/gtm.js?id={gtm_id}\"></script>\n"
+        "<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());</script>\n"
+    )
+
+
+def _page(path: str, settings: Settings) -> str:
+    """One static page, with the GTM container injected after <head> when configured."""
+    html = (Path(__file__).parent / "web" / path).read_text(encoding="utf-8")
+    if settings.gtm_id:
+        html = html.replace("<head>", "<head>\n" + _gtm_snippet(settings.gtm_id), 1)
+    return html
+
+
 def create_app(settings: Settings | None = None, registry: ProviderRegistry | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
 
@@ -109,7 +125,7 @@ def create_app(settings: Settings | None = None, registry: ProviderRegistry | No
 
     @app.get("/login", response_class=HTMLResponse, include_in_schema=False)
     async def login_page() -> str:
-        return (Path(__file__).parent / "web" / "login.html").read_text(encoding="utf-8")
+        return _page("login.html", settings)
 
     @app.post("/auth/signup", status_code=201)
     async def signup(body: Credentials, response: Response) -> dict[str, Any]:
@@ -154,19 +170,19 @@ def create_app(settings: Settings | None = None, registry: ProviderRegistry | No
     async def command_center(request: Request) -> Response:
         if settings.auth_enabled and await _current_user(request) is None:
             return RedirectResponse("/login")
-        return HTMLResponse((Path(__file__).parent / "web" / "index.html").read_text(encoding="utf-8"))
+        return HTMLResponse(_page("index.html", settings))
 
     @app.get("/admin", response_class=HTMLResponse, include_in_schema=False)
     async def admin_page(request: Request) -> Response:
         if settings.auth_enabled and await _current_user(request) is None:
             return RedirectResponse("/login")
-        return HTMLResponse((Path(__file__).parent / "web" / "admin.html").read_text(encoding="utf-8"))
+        return HTMLResponse(_page("admin.html", settings))
 
     @app.get("/analytics", response_class=HTMLResponse, include_in_schema=False)
     async def analytics_page(request: Request) -> Response:
         if settings.auth_enabled and await _current_user(request) is None:
             return RedirectResponse("/login")
-        return HTMLResponse((Path(__file__).parent / "web" / "analytics.html").read_text(encoding="utf-8"))
+        return HTMLResponse(_page("analytics.html", settings))
 
     @app.get("/analytics/summary")
     async def analytics_summary(days: int | None = Query(None),
@@ -174,6 +190,23 @@ def create_app(settings: Settings | None = None, registry: ProviderRegistry | No
         from swarmos.analytics import summary
 
         return await summary(app.state.store, days, workspace_id=_workspace(user))
+
+    @app.get("/analytics/admin", response_class=HTMLResponse, include_in_schema=False)
+    async def analytics_admin_page(request: Request) -> Response:
+        user = await _current_user(request)
+        if user is None or user.email.lower() not in settings.admin_emails:
+            raise HTTPException(403, "owner only")
+        return HTMLResponse(_page("analytics-admin.html", settings))
+
+    @app.get("/analytics/admin/summary")
+    async def analytics_admin_summary(days: int | None = Query(None),
+                                      user: UserRow = Depends(_require_user)) -> dict[str, Any]:
+        """Owner-only: every user's behavior across all workspaces (new vs returning, per-user rows)."""
+        if user.email.lower() not in settings.admin_emails:
+            raise HTTPException(403, "owner only")
+        from swarmos.analytics import admin_summary
+
+        return await admin_summary(app.state.store, days or 28)
 
     @app.get("/runs/{run_id}/receipt")
     async def run_receipt(run_id: str, user: UserRow = Depends(_require_user)) -> dict[str, Any]:
