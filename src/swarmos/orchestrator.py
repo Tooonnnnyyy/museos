@@ -89,6 +89,7 @@ class Orchestrator:
         row = await self.store.get_run(run_id)
         ev = await self.store.find_event(run_id, "run.clarification.requested")
         c = ClarifyOutput.model_validate(ev.payload) if ev else ClarifyOutput(goal=row.idea)
+        c.goal = c.goal or row.idea
         request = RunRequest.model_validate(row.request)
         brief = build_brief(row.idea, c.goal, c.questions, [] if skip else answers, c.assumptions)
         await self.store.event(run_id, "run.clarification.answered",
@@ -161,10 +162,26 @@ class Orchestrator:
             log.exception("clarify for run %s failed", run_id)
             await self.store.update_run(run_id, status=RunStatus.failed.value, error=f"{type(e).__name__}: {e}")
 
+    async def _fastest_provider(self, candidates: list[str]) -> str | None:
+        """Provider with the lowest average time over recent successful calls; None with no history."""
+        from swarmos.store import AgentRunRow
+
+        totals: dict[str, list[int]] = {}
+        for a in await self.store.recent(AgentRunRow, 300):
+            if a.status == "completed" and a.provider in candidates and self.registry.is_healthy(a.provider):
+                t = totals.setdefault(a.provider, [0, 0])
+                t[0] += a.latency_ms
+                t[1] += 1
+        ranked = sorted((ms / n, pid) for pid, (ms, n) in totals.items() if n >= 2)
+        return ranked[0][1] if ranked else None
+
     async def _clarify(self, run_id: str, request: RunRequest) -> None:
         ctx = self._context(run_id, request)
         await self.store.update_run(run_id, status=RunStatus.clarifying.value)
-        route = ctx.router.route(["planning"], count_load=False)
+        # Triage decides whether a team is needed at all, so it should come back quickly:
+        # prefer the provider that has been fastest in recent history.
+        fast = await self._fastest_provider(ctx.router.allowed)
+        route = ctx.router.route(["planning"], preferred=[fast] if fast else None, count_load=False)
         value: ClarifyOutput | None = None
         answered_by: str | None = None
         if route is not None:
@@ -183,6 +200,8 @@ class Orchestrator:
             await ctx.emit("run.clarification.skipped", {"reason": "clarify call failed"})
             self._launch(run_id, request, request.idea)
             return
+        if not value.goal:
+            value.goal = request.idea
         if value.kind != "project" and value.answer.strip():
             # A small question or an action request: answer now instead of spending a team on it.
             limits = [note(request.language, "direct_answer", provider=answered_by)]

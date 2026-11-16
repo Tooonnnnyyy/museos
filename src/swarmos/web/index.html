@@ -375,7 +375,7 @@ const $ = id => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const api = async (path, opts) => {
   const r = await fetch(path, opts);
-  if (!r.ok) { let m = await r.text(); try { m = JSON.parse(m).detail || m; } catch (e) {} throw new Error(String(typeof m === "string" ? m : JSON.stringify(m)).slice(0, 300)); }
+  if (!r.ok) { let m = await r.text(); try { m = JSON.parse(m).detail || m; } catch (e) {} const err = new Error(String(typeof m === "string" ? m : JSON.stringify(m)).slice(0, 300)); err.status = r.status; throw err; }
   return r.json();
 };
 const post = (path, body) => api(path, {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(body || {})});
@@ -426,7 +426,7 @@ function renderSide(ps, rs, cs) {
   rs.forEach(r => {
     const row = el("button", "item"); row.type = "button";
     row.append(el("span", "item__t", r.idea), el("span", "item__s", r.blind ? t("blindRunning") : label(r.status)));
-    row.onclick = () => { r.blind ? openCmp(r.comparison_id) : openRun(r.run_id); $("now").scrollIntoView(); };
+    row.onclick = () => { r.blind ? openCmp(r.comparison_id, r.run_id) : openRun(r.run_id); $("now").scrollIntoView(); };
     list.append(row);
   });
   if (!rs.length) list.append(el("p", null, t("noRuns")));
@@ -440,7 +440,7 @@ function renderSide(ps, rs, cs) {
     : ty.verdict === "simplify" ? t("tallySimplify", ty.swarmos_wins, ty.pass_wins) : t("tallyProgress", ty.pass_wins, left);
   const ready = cs.items.find(c => c.state === "ready");
   $("nextblind").hidden = !ready;
-  $("nextblind").onclick = () => { openCmp(ready.comparison_id); $("now").scrollIntoView(); };
+  $("nextblind").onclick = () => { openCmp(ready.comparison_id, ready.run_id); $("now").scrollIntoView(); };
 }
 async function loadSide() {
   try {
@@ -461,14 +461,14 @@ $("form").onsubmit = async ev => {
     const r = await post("/runs", {idea, language: lang, clarify: $("clarify").checked, cross_review: $("review").checked, compare: $("compare").checked,
       research: $("research").checked,
       baseline_provider: $("baseline").value || null, mode: $("mode").value, budget_usd: Number($("budget").value), max_tasks: Number($("maxtasks").value)});
-    r.comparison_id ? openCmp(r.comparison_id) : openRun(r.run_id);
+    r.comparison_id ? openCmp(r.comparison_id, r.run_id) : openRun(r.run_id);
     $("now").scrollIntoView(); loadSide();
   } catch (e) { $("formerr").textContent = t("submitFailed", e.message); }
   $("go").disabled = false;
 };
 
 function openRun(id) { view = {kind: "run", id}; clearTimeout(timer); tick(); }
-function openCmp(id) { view = {kind: "cmp", id}; clearTimeout(timer); tick(); }
+function openCmp(id, runId) { view = {kind: "cmp", id, runId}; clearTimeout(timer); tick(); }
 async function tick() {
   if (!view) return;
   const mine = view;
@@ -476,7 +476,7 @@ async function tick() {
     if (mine.kind === "run") {
       const [run, events] = await Promise.all([api("/runs/" + mine.id), api("/runs/" + mine.id + "/events")]);
       if (mine !== view) return;
-      if (run.blind) return openCmp(run.comparison_id);
+      if (run.blind) return openCmp(run.comparison_id, run.run_id);
       renderRun(run, events);
       // Polling stops while the page waits on your answers, so typing is never wiped.
       if (LIVE.includes(run.status)) timer = setTimeout(tick, 1500); else loadSide();
@@ -487,7 +487,14 @@ async function tick() {
       renderCmp(c);
       if (c.state === "running") timer = setTimeout(tick, 2000); else loadSide();
     }
-  } catch (e) { timer = setTimeout(tick, 3000); }
+  } catch (e) {
+    if (mine !== view) return;
+    // A blind test disappears when Chief answers directly (nothing to compare): show the run instead
+    // of polling a comparison that no longer exists.
+    if (e.status === 404 && mine.kind === "cmp" && mine.runId) return openRun(mine.runId);
+    if (e.status === 404) { view = null; applyStatic(); loadSide(); return; }
+    timer = setTimeout(tick, 3000);
+  }
 }
 
 function clarifyNote(run) {

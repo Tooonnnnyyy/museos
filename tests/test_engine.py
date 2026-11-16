@@ -164,3 +164,22 @@ async def test_duplicate_submission_is_idempotent(make_orch, store):
     assert r1 == r2 and c1 and not c2
     await orch.wait(r1)
     assert len(await store.list_tasks(r1)) == 2  # no duplicated tasks
+
+
+async def test_triage_prefers_the_provider_that_has_been_fastest(make_orch, store):
+    # "slow" is listed first, so it would win a tie. History must move triage to "quick".
+    orch = make_orch([mock_cfg("slow", latency_s=0.25), mock_cfg("quick", latency_s=0.01, direct_kind="question")])
+    await orch.run(RunRequest(idea="Build some history first", max_tasks=4))
+    run_id, _ = await orch.submit(RunRequest(idea="hey", clarify=True))
+    await orch.wait(run_id)
+    triage = [a for a in await store.list_agent_runs(run_id) if a.task_key == "__clarify__"]
+    assert [a.provider for a in triage] == ["quick"]
+    row = await store.get_run(run_id)
+    assert row.status == "completed" and row.deliverable["synthesis_source"] == "direct"
+
+
+def test_page_falls_back_to_the_run_when_a_blind_test_disappears():
+    from pathlib import Path
+    html = Path("src/swarmos/web/index.html").read_text(encoding="utf-8")
+    assert 'e.status === 404 && mine.kind === "cmp" && mine.runId' in html
+    assert "openCmp(r.comparison_id, r.run_id)" in html

@@ -78,11 +78,31 @@
 - Task book for running parallel coding agents (kitty + tmux + worktrees + gh), written for humans
   and agents alike.
 
+## Done (committed) — FAST DIRECT ANSWERS (2026-11-15, branch `fix/direct-answer-stuck`)
+
+### 10. Small talk and short questions no longer hang or wake the whole team
+Reported by the owner: typing "hey" (blind test ticked) showed "running" forever.
+- **Cause 1 (backend):** the triage reply for a greeting has an empty `goal`. `ClarifyOutput.goal` required
+  one character, so the reply was rejected on 4 attempts (about 60 s), then "hey" went to the full team.
+  Fix: `goal` may be empty (callers use the idea), `answer`/`goal` coerce `None`, and an unknown `kind` that
+  comes with an answer counts as a direct answer.
+- **Cause 2 (page):** a direct answer deletes the blind-test row; the page kept polling
+  `/comparisons/{id}` and treated every 404 as "retry". Fix: on 404 it opens the run instead
+  (`openCmp(id, runId)`).
+- **Speed:** triage is routed to the provider with the lowest average time over recent successful calls
+  (`Orchestrator._fastest_provider`, needs 2+ calls of history).
+- Live check on the owner's machine: "hey" → direct answer in 5 to 6 s, $0, no tasks (was: stuck, then a
+  full team run).
+- Tests: 94 passed, 1 skipped.
+
+**Left:** triage adds one model call to every run with "Ask me first" on; with only slow reasoning models
+connected it still takes as long as that model does.
+
 ## How to run / verify
 
 ```bash
 cd /tmp/museos && uv sync
-uv run pytest -q            # 82 passed, 1 skipped (postgres)
+uv run pytest -q            # 94 passed, 1 skipped (postgres)
 uv run swarmos serve        # http://127.0.0.1:8099/analytics  (sign up at /login)
 ```
 
