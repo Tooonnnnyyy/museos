@@ -147,3 +147,13 @@ def test_load_dotenv_does_not_override_and_skips_blanks(tmp_path, monkeypatch):
     assert os.environ["A_KEY"] == "quoted" and os.environ["B_KEY"] == "plain"
     assert "EMPTY_KEY" not in os.environ and os.environ["KEEP_KEY"] == "fromenv"
     assert load_dotenv(str(tmp_path / "missing")) == []
+
+
+def test_triage_output_accepts_what_models_send_for_small_talk():
+    from swarmos.contracts import ClarifyOutput
+    hi = ClarifyOutput.model_validate({"kind": "question", "answer": "Hi! What are you building?", "goal": "",
+                                       "questions": [], "assumptions": []})
+    assert hi.kind == "question" and hi.goal == ""  # an empty goal used to be rejected
+    assert ClarifyOutput.model_validate({"kind": "Greeting", "answer": "Hello", "goal": None}).kind == "question"
+    assert ClarifyOutput.model_validate({"kind": "whatever", "goal": "Plan a launch"}).kind == "project"
+    assert ClarifyOutput.model_validate({"answer": None, "goal": "g"}).answer == ""

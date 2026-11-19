@@ -223,9 +223,26 @@ class ClarifyOutput(BaseModel):
     # project: worth a team. question: one direct answer settles it. action: asks SwarmAgentOS to do something.
     kind: Literal["project", "question", "action"] = "project"
     answer: str = ""  # filled for question and action; the run then ends without dispatching a team
-    goal: str = Field(min_length=1, max_length=2000)
+    goal: str = ""  # models leave this empty for a greeting or a small question; callers fall back to the idea
     questions: list[str] = Field(default_factory=list)
     assumptions: list[str] = Field(default_factory=list)
+
+    # Be liberal in what triage accepts: a rejected reply costs a retry and then a full team run.
+    @field_validator("answer", "goal", mode="before")
+    @classmethod
+    def _text(cls, v: Any) -> str:
+        return "" if v is None else str(v).strip()[:4000]
+
+    @model_validator(mode="before")
+    @classmethod
+    def _kind(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            kind = str(data.get("kind") or "project").strip().lower()
+            if kind not in ("project", "question", "action"):
+                # "greeting", "chat", "other"...: if it came with an answer, it is a direct answer.
+                kind = "question" if str(data.get("answer") or "").strip() else "project"
+            data = {**data, "kind": kind}
+        return data
 
     @field_validator("questions", "assumptions", mode="before")
     @classmethod
